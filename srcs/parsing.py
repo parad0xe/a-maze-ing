@@ -1,15 +1,5 @@
-from .maze import Maze
+from .maze import Maze, KEYS
 from .errors import ParseError, SetterError
-
-
-KEYS: set[str] = {
-        "width",
-        "height",
-        "entry",
-        "exit",
-        "output_file",
-        "perfect"
-        }
 
 
 def is_valid_pos(maze: Maze, pos: tuple[int, int]) -> bool:

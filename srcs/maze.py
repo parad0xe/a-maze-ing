@@ -4,6 +4,15 @@ from error import SetterError
 MINIMUM_EDGE_SIZE: int = 1
 MAXIMUM_EDGE_SIZE: int = 500
 
+KEYS: set[str] = {  # keys = main.slots ou juste utiliser slots
+        "width",
+        "height",
+        "entry",
+        "exit",
+        "output_file",
+        "perfect"
+        }
+
 
 class Maze:
 

@@ -8,11 +8,11 @@ from solver import solve
 
 
 def main(argc: int) -> int:
-    maze = Maze()
     if argc < 2:
         return Err.INPUT_ERROR
+    maze = Maze()
     try:
-        parse(maze, sys.argv[1])
+        parse(maze, sys.argv[1])  # rename load, creer le maze dans load
     except ParseError as e:
         print(f"parse error: {e}", file=sys.stderr)
         return Err.PARSE_ERROR
@@ -30,14 +30,11 @@ def main(argc: int) -> int:
         ).strip().lower()
         match command:
             case "r":
-                maze_generator(maze)
-                solve(maze)
-                #  clean function
-                #  print function
+                pass
             case "s":
-                solve(maze)
+                pass
             case "c":
-                pass  # rotate maze colors
+                pass
             case "q":
                 return
             case "" | _:
