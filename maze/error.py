@@ -1,7 +1,7 @@
 from enum import IntEnum
 
 
-class Err(IntEnum):
+class ErrCode(IntEnum):
     NO_ERROR = 0
     INPUT_ERROR = 1
     PARSE_ERROR = 2

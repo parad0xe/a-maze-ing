@@ -1,17 +1,19 @@
-from error import SetterError
-
+from .error import SetterError
 
 MINIMUM_EDGE_SIZE: int = 1
 MAXIMUM_EDGE_SIZE: int = 500
 
 KEYS: set[str] = {  # keys = main.slots ou juste utiliser slots
-        "width",
-        "height",
-        "entry",
-        "exit",
-        "output_file",
-        "perfect"
-        }
+    "width",
+    "height",
+    "entry",
+    "exit",
+    "output_file",
+    "perfect",
+}
+
+# !! USE PYDANTIC !!
+# class Maze(BaseModel): ...
 
 
 class Maze:
@@ -68,8 +70,8 @@ class Maze:
     @entry.setter
     def entry(self, value: str) -> None:
         try:
-            pos: list[int] = map(int, value.split(","))
-            if len(pos != 2):
+            pos: list[int] = list(map(int, value.split(",")))
+            if len(pos) != 2:
                 raise SetterError(f"invalid entry: {value}")
             x, y = pos
             self._entry = (x, y)
@@ -83,8 +85,8 @@ class Maze:
     @exit.setter
     def exit(self, value: str) -> None:
         try:
-            pos = map(int, value.split(","))
-            if len(pos != 2):
+            pos: list[int] = list(map(int, value.split(",")))
+            if len(pos) != 2:
                 raise SetterError(f"invalid entry: {value}")
             x, y = pos
             self._exit = (x, y)
