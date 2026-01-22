@@ -2,12 +2,13 @@
 name = "mazegen"
 version = "0.0.1"
 requires-python = ">=3.10"
-dependencies = [
-	"pydantic==2.12.5"
-]
 
 [tool.poetry]
 package-mode = false
+
+[tool.poetry.dependencies]
+mlx = {path = "libs/mlx-2.2-py3-none-any.whl"}
+pydantic = "^2.12.5"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
