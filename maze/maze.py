@@ -26,6 +26,7 @@ class Maze:
         self._exit: tuple[int, int] | None = None
         self._output_file: str | None = None
         self._perfect: bool | None = None
+        self._is_dirty: bool = True
 
     @property
     def map(self) -> list[list[int]] | None:
@@ -116,3 +117,22 @@ class Maze:
             self._perfect = False
         else:
             raise SetterError(f"invalid perfect: {value}")
+
+    @property
+    def is_dirty(self) -> bool:
+        return self._is_dirty
+
+    @is_dirty.setter
+    def is_dirty(self, value: bool) -> None:
+        self._is_dirty = value
+
+    def set_cell(self, x: int, y: int, value: int) -> None:
+        if y < 0 or y >= self._height:
+            raise ValueError("height out of bound")
+        if x < 0 or x >= self._width:
+            raise ValueError("width out of bound")
+        if self._map is None:
+            raise ValueError("map is not set")
+        if self._map[y][x] != value:
+            self._map[y][x] = value
+            self._is_dirty = True

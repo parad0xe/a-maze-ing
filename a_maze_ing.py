@@ -2,12 +2,23 @@ import logging
 import os
 import sys
 
-from maze import Maze, generate, load, render, solve
-from maze.error import ErrCode, ParseError
-from maze.renderer import GraphicalRenderer
-from typing import Any
+from maze import Maze
+from maze.error import ErrCode
+from maze.renderer import (
+    GraphicalRenderer,
+    Renderer,
+    RendererCallbackParams,
+    RendererConfig,
+)
 
 logger = logging.getLogger(__name__)
+
+
+def update(params: RendererCallbackParams) -> None:
+    (maze, config) = params
+
+    # handle inputs
+    # update logic
 
 
 def main(argc: int, argv: list[str]) -> int:
@@ -17,13 +28,14 @@ def main(argc: int, argv: list[str]) -> int:
         )
         return ErrCode.INPUT_ERROR
 
-    #try:
+    # try:
     #    maze: Maze = load(argv[1])
-    #except ParseError as e:
+    # except ParseError as e:
     #    logger.error(f"parse error: {e}")
     #    return ErrCode.PARSE_ERROR
 
     maze = Maze()
+    # fmt: off
     maze.map = [
       [9, 5, 1, 5, 3, 9, 1, 5, 3, 9, 5, 5, 1, 7, 9, 5, 1, 5, 1, 1, 5, 1, 1, 5, 3],
       [14, 11, 10, 11, 10, 14, 8, 1, 2, 8, 5, 3, 12, 1, 4, 1, 2, 11, 10, 8, 1, 2, 8, 1, 2],
@@ -46,43 +58,26 @@ def main(argc: int, argv: list[str]) -> int:
       [8, 6, 9, 5, 6, 9, 5, 1, 6, 9, 2, 12, 1, 4, 5, 5, 4, 1, 6, 9, 2, 8, 5, 5, 2],
       [12, 5, 4, 5, 5, 4, 5, 4, 5, 6, 12, 5, 4, 5, 5, 5, 5, 4, 5, 4, 4, 4, 5, 5, 6],
     ]
-    maze.width = "25" # offset by one
-    maze.height = "20" # offset by one
+    # fmt: on
+    maze.width = "25"
+    maze.height = "20"
     maze.entry = "1,1"
     maze.exit = "19,14"
     maze.output_file = "test.txt"
     maze.perfect = "False"
 
-    #generate(maze)
-    #solve(maze)
-    mlx_renderer = GraphicalRenderer(maze, 60)
-    render(maze, mlx_renderer)
-
-    #  print function
-    while True:
-        command = (
-            input(
-                """=== A-Maze-Ing ===
-            [r] Re-generate a new maze
-            [s] Show/Hide path from entry to exit
-            [c] Rotate maze colors
-            [q] Quit
-            Choice ? [r/s/c/q]: """
-            ).strip().lower()
-        )
-        match command:
-            case "r":
-                pass
-            case "s":
-                pass
-            case "c":
-                pass
-            case "q":
-                return ErrCode.NO_ERROR
-            case "" | _:
-                continue
-
-        return ErrCode.NO_ERROR
+    config: RendererConfig = RendererConfig(
+        border_size=1,
+        cell_size=30,
+        palette={
+            "border": 0x000077FF,
+            "cursor": 0x000077FF,
+            "default": 0x000000FF,
+        },
+    )
+    renderer: Renderer = GraphicalRenderer(maze, config)
+    renderer.loop(update)
+    return ErrCode.NO_ERROR
 
 
 if __name__ == "__main__":
