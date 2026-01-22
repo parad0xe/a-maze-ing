@@ -14,13 +14,13 @@ render(GraphicalRenderer, maze)
 
 
 class Cell(IntEnum):
-    NORTH = 0
-    EAST = 1
-    SOUTH = 2
-    WEST = 3
-    CURSOR = 4
-    SEEK = 5
-    PATH = 6
+    NORTH = (1 << 0)
+    EAST = (1 << 1)
+    SOUTH = (1 << 2)
+    WEST = (1 << 3)
+    CURSOR = (1 << 4)
+    SEEK = (1 << 5)
+    PATH = (1 << 6)
 
 
 class Renderer(Protocol):
