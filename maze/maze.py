@@ -1,3 +1,5 @@
+from enum import IntEnum
+
 from .error import SetterError
 
 MINIMUM_EDGE_SIZE: int = 1
@@ -11,6 +13,18 @@ KEYS: set[str] = {  # keys = main.slots ou juste utiliser slots
     "output_file",
     "perfect",
 }
+
+
+class CellFlag(IntEnum):
+    NORTH = 1
+    EAST = 1 << 1
+    SOUTH = 1 << 2
+    WEST = 1 << 3
+    CURSOR = 1 << 4
+    SEEK = 1 << 5
+    PATH = 1 << 6
+    UNREACHABLE = 1 << 7
+
 
 # !! USE PYDANTIC !!
 # class Maze(BaseModel): ...
@@ -27,6 +41,7 @@ class Maze:
         self._output_file: str | None = None
         self._perfect: bool | None = None
         self._is_dirty: bool = True
+        self.active: tuple[int, int] = (0, 0)
 
     @property
     def map(self) -> list[list[int]] | None:
@@ -126,13 +141,84 @@ class Maze:
     def is_dirty(self, value: bool) -> None:
         self._is_dirty = value
 
-    def set_cell(self, x: int, y: int, value: int) -> None:
-        if y < 0 or y >= self._height:
-            raise ValueError("height out of bound")
-        if x < 0 or x >= self._width:
-            raise ValueError("width out of bound")
-        if self._map is None:
+    def set(self, x: int, y: int, flag: int) -> None:
+        if self.out_of_bound(x, y):
+            raise ValueError(f"out of bound ({x}, {y})")
+        if not self.map:
             raise ValueError("map is not set")
-        if self._map[y][x] != value:
-            self._map[y][x] = value
+        if not self.has_flag(x, y, flag):
+            self.map[y][x] |= flag
+            self._synchronize_neighborgh(x, y)
             self._is_dirty = True
+
+    def unset(self, x: int, y: int, flag: int) -> None:
+        if self.out_of_bound(x, y):
+            raise ValueError(f"out of bound ({x}, {y})")
+        if not self.map:
+            raise ValueError("map is not set")
+        if self.has_flag(x, y, flag):
+            self.map[y][x] &= ~flag
+            self._synchronize_neighborgh(x, y)
+            self._is_dirty = True
+
+    def neighbourgh(self, x: int, y: int) -> list[tuple[int, int]]:
+        if self.out_of_bound(x, y):
+            raise ValueError(f"out of bound ({x}, {y})")
+        if not self.map:
+            raise ValueError("map is not set")
+
+        neighbourgh: list[tuple[int, int]] = []
+
+        if not self.has_flag(x, y, CellFlag.EAST) and not self.out_of_bound(
+                x + 1, y):
+            neighbourgh.append((x + 1, y))
+        if not self.has_flag(x, y, CellFlag.SOUTH) and not self.out_of_bound(
+                x, y + 1):
+            neighbourgh.append((x, y + 1))
+        if not self.has_flag(x, y, CellFlag.WEST) and not self.out_of_bound(
+                x - 1, y):
+            neighbourgh.append((x - 1, y))
+        if not self.has_flag(x, y, CellFlag.NORTH) and not self.out_of_bound(
+                x, y - 1):
+            neighbourgh.append((x, y - 1))
+        return neighbourgh
+
+    def has_flag(self, x: int, y: int, flag: int) -> bool:
+        if self.out_of_bound(x, y):
+            raise ValueError(f"out of bound ({x}, {y})")
+        if not self.map:
+            raise ValueError("map is not set")
+        return bool(self.map[y][x] & flag)
+
+    def out_of_bound(self, x: int, y: int) -> bool:
+        return x < 0 or y < 0 or x >= self.width or y >= self.height
+
+    def _synchronize_neighborgh(self, x: int, y: int):
+        if self.out_of_bound(x, y):
+            raise ValueError(f"out of bound ({x}, {y})")
+        if not self.map:
+            raise ValueError("map is not set")
+
+        if not self.out_of_bound(x + 1, y):
+            if not self.has_flag(x, y, CellFlag.EAST):
+                self.unset(x + 1, y, CellFlag.WEST)
+            else:
+                self.set(x + 1, y, CellFlag.WEST)
+
+        if not self.out_of_bound(x - 1, y):
+            if not self.has_flag(x, y, CellFlag.WEST):
+                self.unset(x - 1, y, CellFlag.EAST)
+            else:
+                self.set(x - 1, y, CellFlag.EAST)
+
+        if not self.out_of_bound(x, y - 1):
+            if not self.has_flag(x, y, CellFlag.NORTH):
+                self.unset(x, y - 1, CellFlag.SOUTH)
+            else:
+                self.set(x, y - 1, CellFlag.SOUTH)
+
+        if not self.out_of_bound(x, y + 1):
+            if not self.has_flag(x, y, CellFlag.SOUTH):
+                self.unset(x, y + 1, CellFlag.NORTH)
+            else:
+                self.set(x, y + 1, CellFlag.NORTH)

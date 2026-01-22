@@ -1,23 +1,30 @@
 import logging
 import os
+import random
 import sys
 
 from maze import Maze
-from maze.error import ErrCode
-from maze.renderer import (
-    GraphicalRenderer,
+from maze.engine import (
+    CellFlag,
+    Engine,
+    EngineCallbackParams,
+    EngineConfig,
+    GraphicalEngine,
     Palette,
-    Renderer,
-    RendererCallbackParams,
-    RendererConfig,
 )
+from maze.error import ErrCode
 
 logger = logging.getLogger(__name__)
 
 
-def update(params: RendererCallbackParams) -> None:
+def update(params: EngineCallbackParams) -> None:
     (maze, config) = params
 
+    active = maze.active
+    for next_cell in random.choices(maze.neighbourgh(active[0], active[1])):
+        maze.unset(active[0], active[1], CellFlag.CURSOR)
+        maze.set(next_cell[0], next_cell[1], CellFlag.CURSOR)
+        maze.active = next_cell
     # handle inputs
     # update logic
 
@@ -67,19 +74,21 @@ def main(argc: int, argv: list[str]) -> int:
     maze.output_file = "test.txt"
     maze.perfect = "False"
 
-    config: RendererConfig = RendererConfig(
-        border_size=1,
-        cell_size=30,
-        space_size=4,
-        palette=Palette(
-            border=0x0000AAFF,
-            unreachable=0xAAAAAAFF,
-            cursor=0x000055FF,
-            default=0x000000FF,
+    engine: Engine = GraphicalEngine(
+        maze=maze,
+        config=EngineConfig(
+            border_size=1,
+            cell_size=30,
+            space_size=4,
+            palette=Palette(
+                border=0x0000AAFF,
+                unreachable=0xAAAAAAFF,
+                cursor=0x00FF00FF,
+                default=0x000000FF,
+            ),
         ),
     )
-    renderer: Renderer = GraphicalRenderer(maze, config)
-    renderer.loop(update)
+    engine.loop(update)
     return ErrCode.NO_ERROR
 
 
