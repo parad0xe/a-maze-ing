@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Any, Callable, Protocol, TypeAlias, TypedDict
+from typing import Any, Callable, Protocol, TypeAlias
 
 from mlx import Mlx
 
@@ -15,11 +15,14 @@ class CellFlag(IntEnum):
     CURSOR = 4
     SEEK = 5
     PATH = 6
+    UNREACHABLE = 7
 
 
-class Palette(TypedDict):
+@dataclass()
+class Palette:
     cursor: int
     border: int
+    unreachable: int
     default: int
 
 
@@ -27,6 +30,7 @@ class Palette(TypedDict):
 class RendererConfig:
     border_size: int
     cell_size: int
+    space_size: int
     palette: Palette
 
 
@@ -37,6 +41,9 @@ class Rgba:
     b: int
     a: int
 
+    def to_bytes(self) -> bytes:
+        return bytes([self.a, self.r, self.g, self.b])
+
     @staticmethod
     def from_int(color: int) -> "Rgba":
         rgba = Rgba(
@@ -46,6 +53,11 @@ class Rgba:
             b=(color >> 8) & 0xFF,
         )
         return rgba
+
+    @staticmethod
+    def bytes_from_int(color: int) -> bytes:
+        rgba = Rgba.from_int(color)
+        return rgba.to_bytes()
 
 
 RendererCallbackParams: TypeAlias = tuple[Maze, RendererConfig]
@@ -58,12 +70,6 @@ class Renderer(Protocol):
         ...
 
 
-class TerminalRenderer:
-
-    def render(self) -> None:
-        raise NotImplementedError("terminal render method not implemented")
-
-
 class GraphicalRenderer:
 
     def __init__(self, maze: Maze, config: RendererConfig) -> None:
@@ -73,63 +79,76 @@ class GraphicalRenderer:
         self._config: RendererConfig = config
         self._mlx: Mlx = Mlx()
         self._mlx_ptr: Any = self._mlx.mlx_init()
-        self._image = self._mlx.mlx_new_image(
-            self._mlx_ptr, self._width, self._height
-        )
-        self._image_data: tuple[
-            Any, ...] = self._mlx.mlx_get_data_addr(self._image)
         self._window = self._mlx.mlx_new_window(
             self._mlx_ptr, self._width, self._height, "A-Maze-ing"
         )
+        self._image = self._mlx.mlx_new_image(
+            self._mlx_ptr, self._width, self._height
+        )
+
+        data: tuple[Any, ...] = self._mlx.mlx_get_data_addr(self._image)
+        self._img: Any = data[0]
+        self._bpp: int = data[1] // 8
+        self._ppr: int = data[2]
 
     def loop(self, callback: RendererCallback) -> None:
         self._mlx.mlx_loop_hook(self._mlx_ptr, self._update, (self, callback))
         self._mlx.mlx_loop(self._mlx_ptr)
 
-    def _fill(self, cx: int, cy: int, flags: int) -> None:
-        bpp = self._image_data[1] // 8
-        line = self._image_data[2]
-        img = self._image_data[0]
-
-        border_color: Rgba = Rgba.from_int(self._config.palette.get("border"))
-        cell_color: Rgba = Rgba.from_int(self._config.palette.get("default"))
-
+    def _draw(self, cx: int, cy: int, flags: int) -> None:
         border_size: int = self._config.border_size
         cell_size: int = self._config.cell_size
+        space_size: int = self._config.space_size
+
+        border_px: bytes = Rgba.bytes_from_int(self._config.palette.border)
+        default_px: bytes = Rgba.bytes_from_int(self._config.palette.default)
+        unreachable_px: bytes = Rgba.bytes_from_int(
+            self._config.palette.unreachable
+        )
+        cursor_px: bytes = Rgba.bytes_from_int(self._config.palette.cursor)
+
+        w_border: int = border_size if flags & (1 << CellFlag.WEST) else 0
+        e_border: int = border_size if flags & (1 << CellFlag.EAST) else 0
+        n_border: int = border_size if flags & (1 << CellFlag.NORTH) else 0
+        s_border: int = border_size if flags & (1 << CellFlag.SOUTH) else 0
+
+        inner_width: int = cell_size - w_border - e_border
+        inner_width_space: int = inner_width - space_size * 2
+
+        space: bytes = default_px * space_size
+        default_line: bytes = ((border_px * w_border) + space +
+                               (default_px * inner_width_space) + space +
+                               (border_px * e_border))
+        cursor_line: bytes = ((border_px * w_border) + space +
+                              (cursor_px * inner_width_space) + space +
+                              (border_px * e_border))
+        unreachable_line: bytes = ((border_px * w_border) +
+                                   (unreachable_px * inner_width) +
+                                   (border_px * e_border))
+        border_line: bytes = border_px * cell_size
 
         x0 = cx * cell_size
         y0 = cy * cell_size
-
-        x_start: int = x0 - 1
-        x_end: int = x0 + cell_size
-        y_start: int = y0 - 1
-        y_end: int = y0 + cell_size
-
-        if flags & (1 << CellFlag.NORTH):
-            y_start += border_size
-        if flags & (1 << CellFlag.SOUTH):
-            y_end -= border_size
-        if flags & (1 << CellFlag.WEST):
-            x_start += border_size
-        if flags & (1 << CellFlag.EAST):
-            x_end -= border_size
-
         for dy in range(cell_size):
-            y = y0 + dy
-            offset = y * line + x0 * bpp
-            for dx in range(cell_size):
-                x = x0 + dx
-                if x_start < x < x_end and y_start < y < y_end:
-                    self._put_pixel(img, offset, cell_color)
-                else:
-                    self._put_pixel(img, offset, border_color)
-                offset += bpp
-
-    def _put_pixel(self, img: Any, offset: int, rgba: Rgba) -> None:
-        img[offset + 0] = rgba.a
-        img[offset + 1] = rgba.r
-        img[offset + 2] = rgba.g
-        img[offset + 3] = rgba.b
+            offset = (y0 + dy) * self._ppr + (x0 * self._bpp)
+            if dy < n_border or dy >= cell_size - s_border:
+                self._img[offset:offset + self._bpp * cell_size] = (
+                    border_line
+                )
+            elif flags & (1 << CellFlag.UNREACHABLE):
+                self._img[offset:offset + self._bpp * cell_size] = (
+                    unreachable_line
+                )
+            elif (dy >= n_border + space_size and
+                  dy < cell_size - s_border - space_size and
+                  flags & (1 << CellFlag.CURSOR)):
+                self._img[offset:offset + self._bpp * cell_size] = (
+                    cursor_line
+                )
+            else:
+                self._img[offset:offset + self._bpp * cell_size] = (
+                    default_line
+                )
 
     def _render(self) -> None:
         maze_map: list[list[int]] | None = self._maze.map
@@ -139,7 +158,7 @@ class GraphicalRenderer:
 
         for cy in range(self._maze.height):
             for cx in range(self._maze.width):
-                self._fill(cx, cy, maze_map[cy][cx])
+                self._draw(cx, cy, maze_map[cy][cx])
 
         self._mlx.mlx_put_image_to_window(
             self._mlx_ptr, self._window, self._image, 0, 0
