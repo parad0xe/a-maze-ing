@@ -48,13 +48,13 @@ def main(argc: int, argv: list[str]) -> int:
     ]
     maze.width = "25" # offset by one
     maze.height = "20" # offset by one
-    maze.entry = "1,1"
-    maze.exit = "19,14"
+    maze.entry = "2,19"
+    maze.exit = "23,0"
     maze.output_file = "test.txt"
     maze.perfect = "False"
 
     #generate(maze)
-    #solve(maze)
+    solve(maze)
     mlx_renderer = GraphicalRenderer(maze, 60)
     render(maze, mlx_renderer)
 

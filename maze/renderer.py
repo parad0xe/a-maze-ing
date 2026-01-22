@@ -96,16 +96,16 @@ class GraphicalRenderer:
             row = y * line + x0 * bpp
             for x in range(self._scale):
                 if x_start < x < x_end and y_start < dy < y_end:
-                    img[row + 0] = 255
-                    img[row + 1] = 0
-                    img[row + 2] = 0
-                    img[row + 3] = 140
-                    row += bpp
-                else:
                     img[row + 0] = b0
                     img[row + 1] = b1
                     img[row + 2] = b2
                     img[row + 3] = b3
+                    row += bpp
+                else:
+                    img[row + 0] = 255
+                    img[row + 1] = 0
+                    img[row + 2] = 0
+                    img[row + 3] = 0
                     row += bpp
 
 
@@ -116,7 +116,12 @@ class GraphicalRenderer:
 
         for cy in range(h):
             for cx in range(w):
-                color = 0xFF000077
+                if m[cy][cx] & Cell.PATH:
+                    color = 0xFFFF0000
+                elif m[cy][cx] & Cell.SEEK:
+                    color = 0xFF00FF00
+                else:
+                    color = 0xFF0000FF
                 self.fill_cell(cx, cy, color, m[cy][cx])
 
     def render(self) -> None:
@@ -129,7 +134,6 @@ class GraphicalRenderer:
                 0,
                 0
             )
-            input("t")
 
         self._mlx.mlx_loop_hook(
             self._mlx_ptr, tick, None

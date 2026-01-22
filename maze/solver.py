@@ -52,6 +52,7 @@ def solve(maze: Maze) -> None:
         )
         c_x: int = cur['x']
         c_y: int = cur['y']
+        brd[c_y][c_x] |= Cell.SEEK
         if cur['step'] != best_step.get((c_x, c_y), cur['step']):
             continue
         processed.add((c_x, c_y))
@@ -60,6 +61,7 @@ def solve(maze: Maze) -> None:
         if (
             not cur['cell'] & Cell.NORTH
             and c_y > 0
+            and (c_x, c_y - 1) not in processed
             and ((c_x, c_y - 1) not in best_step
             or cur['step'] + 1 < best_step[(c_x, c_y - 1)])
         ):
@@ -72,6 +74,7 @@ def solve(maze: Maze) -> None:
         if (
             not cur['cell'] & Cell.EAST
             and c_x < maze.width - 1
+            and (c_x + 1, c_y) not in processed
             and ((c_x + 1, c_y) not in best_step
             or cur['step'] + 1 < best_step[(c_x + 1, c_y)])
         ):
@@ -84,6 +87,7 @@ def solve(maze: Maze) -> None:
         if (
             not cur['cell'] & Cell.SOUTH
             and c_y < maze.height - 1
+            and (c_x, c_y + 1) not in processed
             and ((c_x, c_y + 1) not in best_step
             or cur['step'] + 1 < best_step[(c_x, c_y + 1)])
         ):
@@ -96,11 +100,11 @@ def solve(maze: Maze) -> None:
         if (
             not cur['cell'] & Cell.WEST
             and c_x > 0
+            and (c_x - 1, c_y) not in processed
             and ((c_x - 1, c_y) not in best_step
             or cur['step'] + 1 < best_step[(c_x - 1, c_y)])
         ):
             best_step[c_x - 1, c_y] = cur['step'] + 1
-            processing.append(
             processing.append(
                 compute_cell(
                     brd, e_x, e_y, c_x - 1, c_y, cur['step'] + 1, cur
