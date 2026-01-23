@@ -9,6 +9,7 @@ from .maze import CellFlag, Maze
 @dataclass
 class Palette:
     cursor: int
+    path: int
     border: int
     unreachable: int
     default: int
@@ -48,19 +49,32 @@ class Rgba:
         return rgba.to_bytes()
 
 
-EngineCallbackParams: TypeAlias = tuple[Maze, EngineConfig]
-EngineCallback: TypeAlias = Callable[[EngineCallbackParams], None]
+SwitcherCallback: TypeAlias = Callable[[str], None]
+
+CallbackParams: TypeAlias = tuple[dict[str, Any],
+                                  Maze,
+                                  EngineConfig,
+                                  SwitcherCallback]
+Callback: TypeAlias = Callable[[CallbackParams], None]
+
+LoopConfig: TypeAlias = tuple[Callback, dict[str, Any]]
+LoopConfigCallback: TypeAlias = Callable[[], LoopConfig]
 
 
 class Engine(Protocol):
 
-    def loop(self, callback: EngineCallback) -> None:
+    def loop(self, loop_key: str) -> None:
         ...
 
 
 class GraphicalEngine:
 
-    def __init__(self, maze: Maze, config: EngineConfig) -> None:
+    def __init__(
+        self,
+        maze: Maze,
+        config: EngineConfig,
+        loops: dict[str, LoopConfigCallback],
+    ) -> None:
         self._maze: Maze = maze
         self._width: int = maze.width * config.cell_size
         self._height: int = maze.height * config.cell_size
@@ -78,31 +92,46 @@ class GraphicalEngine:
         self._image_bytes: Any = data[0]
         self._bpp: int = data[1] // 8
         self._ppr: int = data[2]
+        self._loop_registry: dict[str, LoopConfigCallback] = loops
 
     @staticmethod
-    def _update(args: tuple["GraphicalEngine", EngineCallback]) -> None:
-        self, callback = args
-        callback((self._maze, self._config))
+    def _update(args: tuple["GraphicalEngine", LoopConfig]) -> None:
+        self, (callback, context) = args
 
-        if self._maze.is_dirty:
+        callback((context, self._maze, self._config, self._get_switcher()))
+
+        if self._maze.flush():
             self._render()
-            self._maze.is_dirty = False
 
-    def loop(self, callback: EngineCallback) -> None:
-        self._mlx.mlx_loop_hook(self._mlx_ptr, self._update, (self, callback))
+    def _get_switcher(self) -> SwitcherCallback:
+
+        def switcher(loop_key: str) -> None:
+            if loop_key not in self._loop_registry:
+                raise KeyError(f"loop {loop_key} does not exists")
+            self._mlx.mlx_loop_hook(
+                self._mlx_ptr,
+                self._update,
+                (self, self._loop_registry[loop_key]()),
+            )
+
+        return switcher
+
+    def loop(self, loop_key: str) -> None:
+        if loop_key not in self._loop_registry:
+            raise KeyError(f"loop {loop_key} does not exists")
+        self._mlx.mlx_loop_hook(
+            self._mlx_ptr,
+            self._update,
+            (self, self._loop_registry[loop_key]()),
+        )
         self._mlx.mlx_loop(self._mlx_ptr)
 
     def _render(self) -> None:
-        maze_map: list[list[int]] | None = self._maze.map
-
-        if maze_map is None:
-            raise ValueError("invalid maze map")
-
         self._mlx.mlx_clear_window(self._mlx_ptr, self._window)
 
         for cy in range(self._maze.height):
             for cx in range(self._maze.width):
-                self._draw(cx, cy, maze_map[cy][cx])
+                self._draw(cx, cy, self._maze.map_data[cy][cx])
 
         self._mlx.mlx_put_image_to_window(
             self._mlx_ptr, self._window, self._image, 0, 0
@@ -119,6 +148,7 @@ class GraphicalEngine:
             self._config.palette.unreachable
         )
         cursor_px: bytes = Rgba.bytes_from_int(self._config.palette.cursor)
+        path_px: bytes = Rgba.bytes_from_int(self._config.palette.path)
 
         w_border: int = border_size if flags & CellFlag.WEST else 0
         e_border: int = border_size if flags & CellFlag.EAST else 0
@@ -135,6 +165,8 @@ class GraphicalEngine:
         cursor_line: bytes = ((border_px * w_border) + space +
                               (cursor_px * inner_width_space) + space +
                               (border_px * e_border))
+        path_line: bytes = ((border_px * w_border) + (path_px * inner_width) +
+                            (border_px * e_border))
         unreachable_line: bytes = ((border_px * w_border) +
                                    (unreachable_px * inner_width) +
                                    (border_px * e_border))
@@ -157,6 +189,10 @@ class GraphicalEngine:
                   flags & CellFlag.CURSOR):
                 self._image_bytes[offset:offset + self._bpp * cell_size] = (
                     cursor_line
+                )
+            elif flags & CellFlag.PATH:
+                self._image_bytes[offset:offset + self._bpp * cell_size] = (
+                    path_line
                 )
             else:
                 self._image_bytes[offset:offset + self._bpp * cell_size] = (
