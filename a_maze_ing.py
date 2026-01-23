@@ -1,87 +1,129 @@
 import logging
 import os
+import random
 import sys
+
+from pydantic import ValidationError
 
 from maze import Maze
 from maze.engine import (
     EngineConfig,
     GraphicalEngine,
     Palette,
+    UpdateCallback,
     UpdateCallbackParams,
 )
-from maze.error import ErrCode
-from maze.maze import CellFlag
+from maze.generator import generate
+from maze.loader import ParseError, load
 from maze.solving import solve
 
-logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger(__name__)
 
 
-def update(params: UpdateCallbackParams) -> None:
-    (maze, palette, render) = params
-
-    maze.set(*maze.entry, CellFlag.ENTRY)
-    maze.set(*maze.exit, CellFlag.EXIT)
-
-    render()
-    # input user
-    # if q
-    #    leave
-    for _ in solve(maze):
-        render()
-    #    solve and lock user input
-    # if m
-    #    generate and lock user input
+def random_color() -> int:
+    color = 0
+    color |= random.randint(0x22, 0xDD) << 24
+    color |= random.randint(0x22, 0xDD) << 16
+    color |= random.randint(0x22, 0xDD) << 8
+    color |= 0xFF
+    return color
 
 
-def main(argc: int, argv: list[str]) -> int:
+def menu(maze: Maze) -> tuple[UpdateCallback, dict]:
+
+    def update(params: UpdateCallbackParams) -> None:
+        (context, maze, palette, switch, exit, reset, clear) = params
+        print("menu")
+
+        command = (
+            input(
+                """
+                === A-Maze-Ing ===
+                [g] Re-generate a new maze
+                [c] Compute path from entry to exit
+                [s] Show/Hide path from entry to exit
+                [r] Rotate maze colors
+                [n] New random entry and exit points
+                [q] Quit
+                Choice ? [g/c/s/r/n/q]: 
+                """
+            ).strip().lower()
+        )
+        match command:
+            case "g":
+                reset()
+                switch("generator")
+            case "c":
+                switch("solver")
+            case "s":
+                maze.hide_path = not maze.hide_path
+            case "r":
+                for key in vars(palette):
+                    setattr(palette, key, random_color())
+            case "n":
+                maze.entry = (
+                    random.randint(0, maze.width - 1),
+                    random.randint(0, maze.height - 1),
+                )
+                maze.exit = (
+                    random.randint(0, maze.width - 1),
+                    random.randint(0, maze.height - 1),
+                )
+                clear()
+            case "q":
+                exit()
+                return
+
+    return (update, {})
+
+
+def generator(maze: Maze) -> tuple[UpdateCallback, dict]:
+
+    def update(params: UpdateCallbackParams) -> None:
+        (context, maze, palette, switch, exit, reset, clear) = params
+
+        try:
+            (x, y, flag) = next(context["iter"])
+            maze.set(x, y, flag)
+        except StopIteration:
+            switch("menu")
+
+    return (update, {"iter": generate(maze)})
+
+
+def solver(maze: Maze) -> tuple[UpdateCallback, dict]:
+
+    def update(params: UpdateCallbackParams) -> None:
+        (context, maze, palette, switch, exit, reset, clear) = params
+        try:
+            next(context["iter"])
+        except StopIteration:
+            switch("menu")
+
+    return (update, {"iter": solve(maze)})
+
+
+def main(argc: int, argv: list[str]) -> None:
     if argc < 2:
         logger.error(
             f"Usage: python3 {os.path.basename(__file__)} <config_file>"
         )
-        return ErrCode.INPUT_ERROR
 
-    # try:
-    #    maze: Maze = load(argv[1])
-    # except ParseError as e:
-    #    logger.error(f"parse error: {e}")
-    #    return ErrCode.PARSE_ERROR
-
-    # fmt: off
-    maze = Maze.model_validate({
-        "map_data": [
-          [9, 5, 1, 5, 3, 9, 1, 5, 3, 9, 5, 5, 1, 7, 9, 5, 1, 5, 1, 1, 5, 1, 1, 5, 3],
-          [14, 11, 10, 11, 10, 14, 8, 1, 2, 8, 5, 3, 12, 1, 4, 1, 2, 11, 10, 8, 1, 2, 8, 1, 2],
-          [9, 6, 10, 8, 4, 1, 6, 10, 8, 4, 5, 4, 5, 4, 1, 2, 10, 12, 4, 2, 8, 2, 12, 2, 10],
-          [12, 3, 10, 8, 3, 8, 1, 6, 10, 9, 3, 9, 5, 3, 8, 4, 4, 5, 3, 10, 8, 2, 0, 0, 2],
-          [9, 6, 8, 4, 2, 10, 8, 5, 2, 10, 12, 0, 7, 10, 10, 13, 1, 3, 10, 8, 2, 8, 3, 12, 2],
-          [12, 1, 2, 9, 6, 12, 4, 3, 10, 10, 11, 8, 3, 10, 10, 9, 2, 10, 10, 8, 6, 8, 6, 11, 10],
-          [9, 2, 14, 8, 5, 3, 9, 6, 8, 4, 2, 8, 4, 4, 4, 6, 8, 2, 10, 12, 1, 2, 9, 0, 2],
-          [10, 12, 3, 8, 1, 4, 4, 5, 2, 143, 10, 8, 3, 143, 143, 143, 8, 2, 12, 5, 2, 12, 4, 2, 10],
-          [8, 5, 6, 8, 4, 1, 1, 7, 10, 143, 12, 6, 8, 5, 7, 143, 10, 12, 1, 3, 8, 3, 13, 0, 6],
-          [12, 5, 3, 10, 13, 0, 4, 3, 10, 143, 143, 143, 10, 143, 143, 143, 8, 5, 6, 10, 10, 8, 1, 4, 3],
-          [9, 1, 4, 4, 1, 2, 9, 4, 2, 9, 7, 143, 10, 143, 13, 5, 0, 1, 1, 4, 2, 12, 6, 11, 10],
-          [10, 10, 9, 1, 2, 10, 12, 3, 8, 4, 3, 143, 10, 143, 143, 143, 8, 2, 8, 5, 6, 13, 5, 2, 10],
-          [8, 4, 2, 10, 8, 6, 9, 2, 10, 9, 2, 11, 8, 5, 1, 7, 12, 4, 4, 5, 1, 5, 5, 2, 10],
-          [8, 1, 6, 10, 12, 3, 8, 4, 4, 6, 8, 2, 8, 5, 2, 9, 3, 9, 1, 7, 4, 9, 5, 4, 2],
-          [12, 4, 1, 6, 9, 2, 8, 5, 1, 3, 12, 4, 4, 3, 10, 8, 2, 8, 4, 5, 6, 12, 3, 11, 10],
-          [9, 1, 4, 1, 6, 10, 10, 9, 2, 12, 3, 9, 3, 10, 8, 2, 8, 0, 1, 5, 5, 3, 10, 10, 10],
-          [10, 8, 1, 2, 9, 2, 10, 10, 8, 1, 4, 6, 8, 2, 12, 6, 10, 8, 6, 9, 3, 12, 6, 10, 10],
-          [10, 8, 4, 4, 2, 12, 6, 12, 2, 12, 1, 1, 6, 8, 5, 5, 2, 12, 1, 6, 10, 9, 5, 4, 2],
-          [8, 6, 9, 5, 6, 9, 5, 1, 6, 9, 2, 12, 1, 4, 5, 5, 4, 1, 6, 9, 2, 8, 5, 5, 2],
-          [12, 5, 4, 5, 5, 4, 5, 4, 5, 6, 12, 5, 4, 5, 5, 5, 5, 4, 5, 4, 4, 4, 5, 5, 6],
-        ],
-        "width": "25",
-        "height": "20",
-        "entry": "1,1",
-        "exit": "19,14",
-        "output_file": "test.txt",
-        "perfect": "False"
-    })
-    # fmt: on
+    try:
+        maze: Maze = load(argv[1])
+    except ValidationError as e:
+        for error in e.errors():
+            field = " -> ".join(str(item) for item in error["loc"])
+            message = error["msg"]
+            logger.error(f"{type(e).__name__}: {message} {field}) ")
+        sys.exit(1)
+    except (OSError, ParseError, FileNotFoundError) as e:
+        logger.error(f"{type(e).__name__}: {e}")
+        sys.exit(1)
 
     engine = GraphicalEngine(
         maze=maze,
-        config=EngineConfig(border_size=1, cell_size=30, space_size=0),
+        config=EngineConfig(border_size=2, cell_size=50),
         palette=Palette(
             border=0x0000AAFF,
             unreachable=0xAAAAAAFF,
@@ -93,11 +135,14 @@ def main(argc: int, argv: list[str]) -> int:
             entry=0xFFFFFFFF,
             exit=0xFFFFFFFF,
         ),
+        loops={
+            "menu": menu,
+            "generator": generator,
+            "solver": solver,
+        },
     )
-    engine.loop(update)
-    return ErrCode.NO_ERROR
+    engine.loop("menu")
 
 
 if __name__ == "__main__":
-    status: int = main(len(sys.argv), sys.argv)
-    sys.exit(status)
+    main(len(sys.argv), sys.argv)

@@ -1,19 +1,19 @@
 from enum import IntEnum
 from typing import Any, Iterator
 
-from pydantic import BaseModel, Field, PrivateAttr, field_validator
+import numpy as np
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    PrivateAttr,
+    ValidationInfo,
+    field_validator,
+    model_validator,
+)
 
 MINIMUM_EDGE_SIZE: int = 1
 MAXIMUM_EDGE_SIZE: int = 500
-
-KEYS: set[str] = {  # keys = main.slots ou juste utiliser slots
-    "width",
-    "height",
-    "entry",
-    "exit",
-    "output_file",
-    "perfect",
-}
 
 
 class CellFlag(IntEnum):
@@ -21,13 +21,13 @@ class CellFlag(IntEnum):
     EAST = 1 << 1
     SOUTH = 1 << 2
     WEST = 1 << 3
-    CURSOR = 1 << 4
-    SEEK = 1 << 5
-    PATH = 1 << 6
-    UNREACHABLE = 1 << 7
-    SEEK_PREMIUM = 1 << 8
-    ENTRY = 1 << 9
-    EXIT = 1 << 10
+    ENTRY = 1 << 4
+    EXIT = 1 << 5
+    UNREACHABLE = 1 << 6
+    CURSOR = 1 << 7
+    SEEK = 1 << 8
+    PATH = 1 << 9
+    SEEK_PREMIUM = 1 << 10
 
 
 DIRECTIONS: list[tuple[CellFlag, tuple[int, int]]] = [
@@ -46,39 +46,59 @@ OPPOSITES: dict[int, tuple[CellFlag, tuple[int, int]]] = {
 
 
 class Maze(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     width: int = Field(frozen=True, ge=MINIMUM_EDGE_SIZE, le=MAXIMUM_EDGE_SIZE)
     height: int = Field(
         frozen=True, ge=MINIMUM_EDGE_SIZE, le=MAXIMUM_EDGE_SIZE
     )
-    map_data: list[list[int]] = Field(frozen=True)
-    entry: tuple[int, int] = Field(frozen=True)
-    exit: tuple[int, int] = Field(frozen=True)
+    map_data: list[list[int]] = []
+    entry: tuple[int, int]
+    exit: tuple[int, int]
     output_file: str = Field(frozen=True, min_length=1)
     perfect: bool = Field(frozen=True)
+    hide_path: bool = Field(default=False)
     _is_dirty: bool = PrivateAttr(default=True)
 
-    def __setattr__(self, name, value):
-        super().__setattr__(name, value)
-
+    def __setattr__(self, name, value: Any):
         if not name.startswith("_"):
             self._is_dirty = True
+            if name == "entry":
+                x, y = value
+                self.unset(*self.entry, CellFlag.ENTRY)
+                self.set(x, y, CellFlag.ENTRY)
+            elif name == "exit":
+                x, y = value
+                self.unset(*self.exit, CellFlag.EXIT)
+                self.set(x, y, CellFlag.EXIT)
+        super().__setattr__(name, value)
 
     def flush(self) -> bool:
         was_dirty: bool = self._is_dirty
         self._is_dirty = False
         return was_dirty
 
+    @model_validator(mode="after")
+    def _initialize_grid(self) -> "Maze":
+        if not self.map_data:
+            self.map_data = np.zeros((self.height, self.width),
+                                     dtype=np.int32).tolist()
+
+        return self
+
     @field_validator("entry", "exit", mode="before")
     @classmethod
-    def _parse_coordinates(cls, v: Any) -> tuple[int, int]:
+    def _parse_coordinates(cls, v: Any,
+                           info: ValidationInfo) -> tuple[int, int]:
         if isinstance(v, str):
-            try:
-                coords: list[int] = [int(p.strip()) for p in v.split(",")]
-                if len(coords) != 2:
-                    raise ValueError(f"invalid coordinate ({v})")
-                return (coords[0], coords[1])
-            except ValueError:
-                raise ValueError(f"invalid coordinate format: ({v})")
+            coords: list[int] = [int(p.strip()) for p in v.split(",")]
+            if len(coords) != 2:
+                raise ValueError(f"Invalid coordinate ({v})")
+            width, height = (info.data["width"], info.data["height"])
+            x, y = coords
+            if x < 0 or y < 0 or x >= width or y >= height:
+                raise ValueError(f"Coordinates is out of bounds ({coords})")
+            return (coords[0], coords[1])
         return v
 
     @field_validator("output_file", mode="before")
@@ -123,6 +143,10 @@ class Maze(BaseModel):
 
     def is_out_of_bounds(self, x: int, y: int) -> bool:
         return x < 0 or y < 0 or x >= self.width or y >= self.height
+
+    def clear(self) -> None:
+        self.map_data = np.zeros((self.height, self.width),
+                                 dtype=np.int32).tolist()
 
     def _apply_flag_state(self, x: int, y: int, flag: int, on: bool) -> None:
         if on:

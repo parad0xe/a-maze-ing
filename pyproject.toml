@@ -9,6 +9,7 @@ package-mode = false
 [tool.poetry.dependencies]
 mlx = {path = "libs/mlx-2.2-py3-none-any.whl"}
 pydantic = "^2.12.5"
+numpy = "2.2.6"
 
 [[tool.mypy.overrides]]
 module = "mlx.*"
