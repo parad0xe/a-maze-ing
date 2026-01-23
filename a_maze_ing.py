@@ -18,38 +18,42 @@ logger = logging.getLogger(__name__)
 
 
 def menu() -> tuple[UpdateCallback, dict]:
+
     def update(params: UpdateCallbackParams) -> None:
-        (context, maze, config, switch) = params
+        (context, maze, palette, switch) = params
         print("menu")
-        config.palette.border = random.choice([0xFF0000FF, 0x00FFFFFF])
+        palette.border = random.choice([0xFF0000FF, 0x00FFFFFF])
         input("enter to swtich")
         switch("generator")
+        return
 
     return (update, {})
 
 
 def generator() -> tuple[UpdateCallback, dict]:
+
     def update(params: UpdateCallbackParams) -> None:
-        (context, maze, config, switch) = params
+        (context, maze, palette, switch) = params
 
-        active = context["active"]
-        neighbours_iter = maze.iter_neighbours(active[0], active[1])
+        current = context["current"]
+        neighbours_iter = maze.iter_neighbours(current[0], current[1])
         next_cell = random.choice(list(neighbours_iter))
-        maze.unset(active[0], active[1], CellFlag.CURSOR)
-        maze.set(active[0], active[1], CellFlag.PATH)
+        maze.unset(current[0], current[1], CellFlag.CURSOR)
+        maze.set(current[0], current[1], CellFlag.PATH)
         maze.set(next_cell[0], next_cell[1], CellFlag.CURSOR)
-        context["active"] = next_cell
+        context["current"] = next_cell
 
-        print(context["iter"])
-        if context["iter"] == 200:
+        print(context["counter"])
+        if context["counter"] == 200:
             switch("menu")
-        else:
-            context["iter"] += 1
+            return
+        context["counter"] += 1
 
-    return (update, {"active": (0, 0), "iter": 0})
+    return (update, {"current": (0, 0), "counter": 0})
 
 
 def solver() -> tuple[UpdateCallback, dict]:
+
     def update(params: UpdateCallbackParams) -> None:
         pass
 
@@ -104,17 +108,13 @@ def main(argc: int, argv: list[str]) -> int:
 
     engine = GraphicalEngine(
         maze=maze,
-        config=EngineConfig(
-            border_size=1,
-            cell_size=30,
-            space_size=0,
-            palette=Palette(
-                border=0x0000AAFF,
-                unreachable=0xAAAAAAFF,
-                cursor=0x00FF00FF,
-                path=0x00FF0055,
-                default=0x000000FF,
-            ),
+        config=EngineConfig(border_size=1, cell_size=30, space_size=0),
+        palette=Palette(
+            border=0x0000AAFF,
+            unreachable=0xAAAAAAFF,
+            cursor=0x00FF00FF,
+            path=0x00FF0055,
+            default=0x000000FF,
         ),
         loops={
             "menu": menu,

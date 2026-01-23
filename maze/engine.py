@@ -29,21 +29,8 @@ class Palette(BaseModel):
 
 class EngineConfig(BaseModel):
     cell_size: int = Field(frozen=True)
-    border_size: int
-    space_size: int
-    palette: Palette
-
-    _is_dirty: bool = PrivateAttr(default=True)
-
-    def __setattr__(self, name, value):
-        super().__setattr__(name, value)
-        if not name.startswith("_"):
-            self._is_dirty = True
-
-    def flush(self) -> bool:
-        dirty = self._is_dirty or self.palette.flush()
-        self._is_dirty = False
-        return dirty
+    border_size: int = Field(frozen=True)
+    space_size: int = Field(frozen=True)
 
 
 class Rgba(BaseModel):
@@ -75,7 +62,7 @@ SwitcherCallback: TypeAlias = Callable[[str], None]
 
 UpdateCallbackParams: TypeAlias = tuple[dict[str, Any],
                                         Maze,
-                                        EngineConfig,
+                                        Palette,
                                         SwitcherCallback]
 UpdateCallback: TypeAlias = Callable[[UpdateCallbackParams], None]
 
@@ -89,12 +76,14 @@ class GraphicalEngine:
         self,
         maze: Maze,
         config: EngineConfig,
+        palette: Palette,
         loops: dict[str, LoopConfigCallback],
     ) -> None:
         self._maze: Maze = maze
         self._width: int = maze.width * config.cell_size
         self._height: int = maze.height * config.cell_size
         self._config: EngineConfig = config
+        self._palette: Palette = palette
         self._mlx: Mlx = Mlx()
         self._mlx_ptr: Any = self._mlx.mlx_init()
         self._window = self._mlx.mlx_new_window(
@@ -117,15 +106,13 @@ class GraphicalEngine:
         cell_size: int = self._config.cell_size
         space_size: int = self._config.space_size
 
-        border_px: bytes = Rgba.bytes_from_int(self._config.palette.border)
-        default_px: bytes = Rgba.bytes_from_int(self._config.palette.default)
+        border_px: bytes = Rgba.bytes_from_int(self._palette.border)
+        default_px: bytes = Rgba.bytes_from_int(self._palette.default)
 
         space: bytes = default_px * space_size
 
-        for key in vars(self._config.palette):
-            pixel: bytes = Rgba.bytes_from_int(
-                getattr(self._config.palette, key)
-            )
+        for key in vars(self._palette):
+            pixel: bytes = Rgba.bytes_from_int(getattr(self._palette, key))
 
             self._lines[key] = {
                 "fill": {
@@ -162,9 +149,9 @@ class GraphicalEngine:
     def _update(args: tuple["GraphicalEngine", LoopConfig]) -> None:
         self, (callback, context) = args
 
-        callback((context, self._maze, self._config, self._get_switcher()))
+        callback((context, self._maze, self._palette, self._get_switcher()))
 
-        if self._config.flush():
+        if self._palette.flush():
             self._precompute_lines()
 
         if self._maze.flush():
