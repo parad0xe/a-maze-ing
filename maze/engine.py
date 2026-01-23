@@ -58,16 +58,8 @@ class Rgba(BaseModel):
         return rgba.to_bytes()
 
 
-SwitcherCallback: TypeAlias = Callable[[str], None]
-
-UpdateCallbackParams: TypeAlias = tuple[dict[str, Any],
-                                        Maze,
-                                        Palette,
-                                        SwitcherCallback]
+UpdateCallbackParams: TypeAlias = tuple[Maze, Palette]
 UpdateCallback: TypeAlias = Callable[[UpdateCallbackParams], None]
-
-LoopConfig: TypeAlias = tuple[UpdateCallback, dict[str, Any]]
-LoopConfigCallback: TypeAlias = Callable[[], LoopConfig]
 
 
 class GraphicalEngine:
@@ -77,7 +69,6 @@ class GraphicalEngine:
         maze: Maze,
         config: EngineConfig,
         palette: Palette,
-        loops: dict[str, LoopConfigCallback],
     ) -> None:
         self._maze: Maze = maze
         self._width: int = maze.width * config.cell_size
@@ -97,7 +88,6 @@ class GraphicalEngine:
         self._image_bytes: Any = data[0]
         self._bpp: int = data[1] // 8
         self._ppr: int = data[2]
-        self._loop_registry: dict[str, LoopConfigCallback] = loops
         self._lines: dict[str, dict[str, dict[tuple[int, int], bytes]]] = {}
         self._precompute_lines()
 
@@ -146,10 +136,10 @@ class GraphicalEngine:
             }
 
     @staticmethod
-    def _update(args: tuple["GraphicalEngine", LoopConfig]) -> None:
-        self, (callback, context) = args
+    def _update(args: tuple["GraphicalEngine", UpdateCallback]) -> None:
+        self, callback = args
 
-        callback((context, self._maze, self._palette, self._get_switcher()))
+        callback((self._maze, self._palette))
 
         if self._palette.flush():
             self._precompute_lines()
@@ -157,28 +147,13 @@ class GraphicalEngine:
         if self._maze.flush():
             self._render()
 
-    def loop(self, loop_key: str) -> None:
-        if loop_key not in self._loop_registry:
-            raise KeyError(f"loop {loop_key} does not exists")
+    def loop(self, callback: UpdateCallback) -> None:
         self._mlx.mlx_loop_hook(
             self._mlx_ptr,
             self._update,
-            (self, self._loop_registry[loop_key]()),
+            (self, callback),
         )
         self._mlx.mlx_loop(self._mlx_ptr)
-
-    def _get_switcher(self) -> SwitcherCallback:
-
-        def switcher(loop_key: str) -> None:
-            if loop_key not in self._loop_registry:
-                raise KeyError(f"loop {loop_key} does not exists")
-            self._mlx.mlx_loop_hook(
-                self._mlx_ptr,
-                self._update,
-                (self, self._loop_registry[loop_key]()),
-            )
-
-        return switcher
 
     def _render(self) -> None:
         self._mlx.mlx_clear_window(self._mlx_ptr, self._window)

@@ -1,15 +1,12 @@
 import logging
 import os
-import random
 import sys
 
 from maze import Maze
 from maze.engine import (
-    CellFlag,
     EngineConfig,
     GraphicalEngine,
     Palette,
-    UpdateCallback,
     UpdateCallbackParams,
 )
 from maze.error import ErrCode
@@ -17,47 +14,8 @@ from maze.error import ErrCode
 logger = logging.getLogger(__name__)
 
 
-def menu() -> tuple[UpdateCallback, dict]:
-
-    def update(params: UpdateCallbackParams) -> None:
-        (context, maze, palette, switch) = params
-        print("menu")
-        palette.border = random.choice([0xFF0000FF, 0x00FFFFFF])
-        input("enter to swtich")
-        switch("generator")
-        return
-
-    return (update, {})
-
-
-def generator() -> tuple[UpdateCallback, dict]:
-
-    def update(params: UpdateCallbackParams) -> None:
-        (context, maze, palette, switch) = params
-
-        current = context["current"]
-        neighbours_iter = maze.iter_neighbours(current[0], current[1])
-        next_cell = random.choice(list(neighbours_iter))
-        maze.unset(current[0], current[1], CellFlag.CURSOR)
-        maze.set(current[0], current[1], CellFlag.PATH)
-        maze.set(next_cell[0], next_cell[1], CellFlag.CURSOR)
-        context["current"] = next_cell
-
-        print(context["counter"])
-        if context["counter"] == 200:
-            switch("menu")
-            return
-        context["counter"] += 1
-
-    return (update, {"current": (0, 0), "counter": 0})
-
-
-def solver() -> tuple[UpdateCallback, dict]:
-
-    def update(params: UpdateCallbackParams) -> None:
-        pass
-
-    return (update, {})
+def update(params: UpdateCallbackParams) -> None:
+    (maze, palette) = params
 
 
 def main(argc: int, argv: list[str]) -> int:
@@ -116,13 +74,8 @@ def main(argc: int, argv: list[str]) -> int:
             path=0x00FF0055,
             default=0x000000FF,
         ),
-        loops={
-            "menu": menu,
-            "generator": generator,
-            "solver": solver,
-        },
     )
-    engine.loop("generator")
+    engine.loop(update)
     return ErrCode.NO_ERROR
 
 
