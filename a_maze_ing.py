@@ -5,22 +5,20 @@ import sys
 
 from maze import Maze
 from maze.engine import (
-    Callback,
-    CallbackParams,
     CellFlag,
-    Engine,
     EngineConfig,
     GraphicalEngine,
     Palette,
+    UpdateCallback,
+    UpdateCallbackParams,
 )
 from maze.error import ErrCode
 
 logger = logging.getLogger(__name__)
 
 
-def menu() -> tuple[Callback, dict]:
-
-    def update(params: CallbackParams) -> None:
+def menu() -> tuple[UpdateCallback, dict]:
+    def update(params: UpdateCallbackParams) -> None:
         (context, maze, config, switch) = params
         print("menu")
         config.palette.border = random.choice([0xFF0000FF, 0x00FFFFFF])
@@ -30,9 +28,8 @@ def menu() -> tuple[Callback, dict]:
     return (update, {})
 
 
-def generator() -> tuple[Callback, dict]:
-
-    def update(params: CallbackParams) -> None:
+def generator() -> tuple[UpdateCallback, dict]:
+    def update(params: UpdateCallbackParams) -> None:
         (context, maze, config, switch) = params
 
         active = context["active"]
@@ -52,9 +49,8 @@ def generator() -> tuple[Callback, dict]:
     return (update, {"active": (0, 0), "iter": 0})
 
 
-def solver() -> tuple[Callback, dict]:
-
-    def update(params: CallbackParams) -> None:
+def solver() -> tuple[UpdateCallback, dict]:
+    def update(params: UpdateCallbackParams) -> None:
         pass
 
     return (update, {})
@@ -106,7 +102,7 @@ def main(argc: int, argv: list[str]) -> int:
     })
     # fmt: on
 
-    engine: Engine = GraphicalEngine(
+    engine = GraphicalEngine(
         maze=maze,
         config=EngineConfig(
             border_size=1,

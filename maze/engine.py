@@ -1,30 +1,52 @@
-from dataclasses import dataclass
-from typing import Any, Callable, Protocol, TypeAlias
+from typing import Any, Callable, TypeAlias
 
 from mlx import Mlx
+from pydantic import BaseModel, Field, PrivateAttr
 
 from .maze import CellFlag, Maze
 
 
-@dataclass
-class Palette:
+class Palette(BaseModel):
     cursor: int
     path: int
     border: int
     unreachable: int
     default: int
 
+    _is_dirty = PrivateAttr(default=True)
 
-@dataclass
-class EngineConfig:
+    def __setattr__(self, name: str, value: Any) -> None:
+        super().__setattr__(name, value)
+
+        if not name.startswith("_"):
+            self._is_dirty = True
+
+    def flush(self) -> bool:
+        is_dirty: bool = self._is_dirty
+        self._is_dirty = False
+        return is_dirty
+
+
+class EngineConfig(BaseModel):
+    cell_size: int = Field(frozen=True)
     border_size: int
-    cell_size: int
     space_size: int
     palette: Palette
 
+    _is_dirty: bool = PrivateAttr(default=True)
 
-@dataclass
-class Rgba:
+    def __setattr__(self, name, value):
+        super().__setattr__(name, value)
+        if not name.startswith("_"):
+            self._is_dirty = True
+
+    def flush(self) -> bool:
+        dirty = self._is_dirty or self.palette.flush()
+        self._is_dirty = False
+        return dirty
+
+
+class Rgba(BaseModel):
     r: int
     g: int
     b: int
@@ -51,20 +73,14 @@ class Rgba:
 
 SwitcherCallback: TypeAlias = Callable[[str], None]
 
-CallbackParams: TypeAlias = tuple[dict[str, Any],
-                                  Maze,
-                                  EngineConfig,
-                                  SwitcherCallback]
-Callback: TypeAlias = Callable[[CallbackParams], None]
+UpdateCallbackParams: TypeAlias = tuple[dict[str, Any],
+                                        Maze,
+                                        EngineConfig,
+                                        SwitcherCallback]
+UpdateCallback: TypeAlias = Callable[[UpdateCallbackParams], None]
 
-LoopConfig: TypeAlias = tuple[Callback, dict[str, Any]]
+LoopConfig: TypeAlias = tuple[UpdateCallback, dict[str, Any]]
 LoopConfigCallback: TypeAlias = Callable[[], LoopConfig]
-
-
-class Engine(Protocol):
-
-    def loop(self, loop_key: str) -> None:
-        ...
 
 
 class GraphicalEngine:
@@ -93,6 +109,54 @@ class GraphicalEngine:
         self._bpp: int = data[1] // 8
         self._ppr: int = data[2]
         self._loop_registry: dict[str, LoopConfigCallback] = loops
+        self._lines: dict[str, dict[str, dict[tuple[int, int], bytes]]] = {}
+        self._precompute_lines()
+
+    def _precompute_lines(self) -> None:
+        border_size: int = self._config.border_size
+        cell_size: int = self._config.cell_size
+        space_size: int = self._config.space_size
+
+        border_px: bytes = Rgba.bytes_from_int(self._config.palette.border)
+        default_px: bytes = Rgba.bytes_from_int(self._config.palette.default)
+
+        space: bytes = default_px * space_size
+
+        for key in vars(self._config.palette):
+            pixel: bytes = Rgba.bytes_from_int(
+                getattr(self._config.palette, key)
+            )
+
+            self._lines[key] = {
+                "fill": {
+                    (0, 0):
+                        pixel * cell_size,
+                    (CellFlag.WEST, 0): (border_px * border_size) + pixel *
+                                        (cell_size - border_size),
+                    (0, CellFlag.EAST):
+                        pixel * (cell_size - border_size) +
+                        (border_px * border_size),
+                    (CellFlag.WEST, CellFlag.EAST):
+                        (border_px * border_size) + pixel *
+                        (cell_size - border_size * 2) +
+                        (border_px * border_size),
+                },
+                "space": {
+                    (0, 0):
+                        space + pixel * (cell_size - space_size * 2) + space,
+                    (CellFlag.WEST, 0):
+                        (border_px * border_size) + space + pixel *
+                        (cell_size - border_size - space_size * 2) + space,
+                    (0, CellFlag.EAST):
+                        space + pixel *
+                        (cell_size - border_size - space_size * 2) + space +
+                        (border_px * border_size),
+                    (CellFlag.WEST, CellFlag.EAST):
+                        (border_px * border_size) + space + pixel *
+                        (cell_size - border_size * 2 - space_size * 2) +
+                        space + (border_px * border_size),
+                },
+            }
 
     @staticmethod
     def _update(args: tuple["GraphicalEngine", LoopConfig]) -> None:
@@ -100,8 +164,21 @@ class GraphicalEngine:
 
         callback((context, self._maze, self._config, self._get_switcher()))
 
+        if self._config.flush():
+            self._precompute_lines()
+
         if self._maze.flush():
             self._render()
+
+    def loop(self, loop_key: str) -> None:
+        if loop_key not in self._loop_registry:
+            raise KeyError(f"loop {loop_key} does not exists")
+        self._mlx.mlx_loop_hook(
+            self._mlx_ptr,
+            self._update,
+            (self, self._loop_registry[loop_key]()),
+        )
+        self._mlx.mlx_loop(self._mlx_ptr)
 
     def _get_switcher(self) -> SwitcherCallback:
 
@@ -116,85 +193,49 @@ class GraphicalEngine:
 
         return switcher
 
-    def loop(self, loop_key: str) -> None:
-        if loop_key not in self._loop_registry:
-            raise KeyError(f"loop {loop_key} does not exists")
-        self._mlx.mlx_loop_hook(
-            self._mlx_ptr,
-            self._update,
-            (self, self._loop_registry[loop_key]()),
-        )
-        self._mlx.mlx_loop(self._mlx_ptr)
-
     def _render(self) -> None:
         self._mlx.mlx_clear_window(self._mlx_ptr, self._window)
 
-        for cy in range(self._maze.height):
-            for cx in range(self._maze.width):
-                self._draw(cx, cy, self._maze.map_data[cy][cx])
-
-        self._mlx.mlx_put_image_to_window(
-            self._mlx_ptr, self._window, self._image, 0, 0
-        )
-
-    def _draw(self, cx: int, cy: int, flags: int) -> None:
         border_size: int = self._config.border_size
         cell_size: int = self._config.cell_size
         space_size: int = self._config.space_size
 
-        border_px: bytes = Rgba.bytes_from_int(self._config.palette.border)
-        default_px: bytes = Rgba.bytes_from_int(self._config.palette.default)
-        unreachable_px: bytes = Rgba.bytes_from_int(
-            self._config.palette.unreachable
+        for cy in range(self._maze.height):
+            for cx in range(self._maze.width):
+                flags: int = self._maze.get_cell(cx, cy)
+
+                n_border: int = border_size if flags & CellFlag.NORTH else 0
+                s_border: int = border_size if flags & CellFlag.SOUTH else 0
+
+                x0 = cx * cell_size
+                y0 = cy * cell_size
+                e: int = flags & CellFlag.EAST
+                w: int = flags & CellFlag.WEST
+                for dy in range(cell_size):
+                    offset = (y0 + dy) * self._ppr + (x0 * self._bpp)
+                    if dy < n_border or dy >= cell_size - s_border:
+                        self._image_bytes[offset:offset +
+                                          self._bpp * cell_size] = self._lines[
+                                              "border"]["fill"][(w, e)]
+                    elif flags & CellFlag.UNREACHABLE:
+                        self._image_bytes[offset:offset +
+                                          self._bpp * cell_size] = self._lines[
+                                              "unreachable"]["fill"][(w, e)]
+                    elif (dy >= n_border + space_size and
+                          dy < cell_size - s_border - space_size and
+                          flags & CellFlag.CURSOR):
+                        self._image_bytes[offset:offset +
+                                          self._bpp * cell_size] = self._lines[
+                                              "cursor"]["space"][(w, e)]
+                    elif flags & CellFlag.PATH:
+                        self._image_bytes[offset:offset +
+                                          self._bpp * cell_size] = self._lines[
+                                              "path"]["fill"][(w, e)]
+                    else:
+                        self._image_bytes[offset:offset +
+                                          self._bpp * cell_size] = self._lines[
+                                              "default"]["fill"][(w, e)]
+
+        self._mlx.mlx_put_image_to_window(
+            self._mlx_ptr, self._window, self._image, 0, 0
         )
-        cursor_px: bytes = Rgba.bytes_from_int(self._config.palette.cursor)
-        path_px: bytes = Rgba.bytes_from_int(self._config.palette.path)
-
-        w_border: int = border_size if flags & CellFlag.WEST else 0
-        e_border: int = border_size if flags & CellFlag.EAST else 0
-        n_border: int = border_size if flags & CellFlag.NORTH else 0
-        s_border: int = border_size if flags & CellFlag.SOUTH else 0
-
-        inner_width: int = cell_size - w_border - e_border
-        inner_width_space: int = inner_width - space_size * 2
-
-        space: bytes = default_px * space_size
-        default_line: bytes = ((border_px * w_border) + space +
-                               (default_px * inner_width_space) + space +
-                               (border_px * e_border))
-        cursor_line: bytes = ((border_px * w_border) + space +
-                              (cursor_px * inner_width_space) + space +
-                              (border_px * e_border))
-        path_line: bytes = ((border_px * w_border) + (path_px * inner_width) +
-                            (border_px * e_border))
-        unreachable_line: bytes = ((border_px * w_border) +
-                                   (unreachable_px * inner_width) +
-                                   (border_px * e_border))
-        border_line: bytes = border_px * cell_size
-
-        x0 = cx * cell_size
-        y0 = cy * cell_size
-        for dy in range(cell_size):
-            offset = (y0 + dy) * self._ppr + (x0 * self._bpp)
-            if dy < n_border or dy >= cell_size - s_border:
-                self._image_bytes[offset:offset + self._bpp * cell_size] = (
-                    border_line
-                )
-            elif flags & CellFlag.UNREACHABLE:
-                self._image_bytes[offset:offset + self._bpp * cell_size] = (
-                    unreachable_line
-                )
-            elif (dy >= n_border + space_size and
-                  dy < cell_size - s_border - space_size and
-                  flags & CellFlag.CURSOR):
-                self._image_bytes[offset:offset + self._bpp * cell_size] = (
-                    cursor_line
-                )
-            elif flags & CellFlag.PATH:
-                self._image_bytes[offset:offset + self._bpp * cell_size] = (
-                    path_line
-                )
-            else:
-                self._image_bytes[offset:offset + self._bpp * cell_size] = (
-                    default_line
-                )

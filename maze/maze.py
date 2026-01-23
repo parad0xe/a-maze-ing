@@ -83,6 +83,11 @@ class Maze(BaseModel):
     def _strip_string(cls, v: Any) -> str:
         return v.strip() if isinstance(v, str) else v
 
+    def get_cell(self, x: int, y: int) -> int:
+        if self.is_out_of_bounds(x, y):
+            raise ValueError(f"out of bound ({x}, {y})")
+        return self.map_data[y][x]
+
     def set(self, x: int, y: int, flag: int) -> None:
         if self.is_out_of_bounds(x, y):
             raise ValueError(f"out of bound ({x}, {y})")
