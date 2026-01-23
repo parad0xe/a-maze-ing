@@ -10,12 +10,27 @@ from maze.engine import (
     UpdateCallbackParams,
 )
 from maze.error import ErrCode
+from maze.maze import CellFlag
+from maze.solving import solve
 
 logger = logging.getLogger(__name__)
 
 
 def update(params: UpdateCallbackParams) -> None:
-    (maze, palette) = params
+    (maze, palette, render) = params
+
+    maze.set(*maze.entry, CellFlag.ENTRY)
+    maze.set(*maze.exit, CellFlag.EXIT)
+
+    render()
+    # input user
+    # if q
+    #    leave
+    for _ in solve(maze):
+        render()
+    #    solve and lock user input
+    # if m
+    #    generate and lock user input
 
 
 def main(argc: int, argv: list[str]) -> int:
@@ -71,8 +86,12 @@ def main(argc: int, argv: list[str]) -> int:
             border=0x0000AAFF,
             unreachable=0xAAAAAAFF,
             cursor=0x00FF00FF,
-            path=0x00FF0055,
+            path=0xFF0000AA,
+            seek=0x00FF0033,
+            seek_premium=0xFF00FFAA,
             default=0x000000FF,
+            entry=0xFFFFFFFF,
+            exit=0xFFFFFFFF,
         ),
     )
     engine.loop(update)

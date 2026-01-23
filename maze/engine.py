@@ -9,9 +9,13 @@ from .maze import CellFlag, Maze
 class Palette(BaseModel):
     cursor: int
     path: int
+    seek: int
+    seek_premium: int
     border: int
     unreachable: int
     default: int
+    entry: int
+    exit: int
 
     _is_dirty = PrivateAttr(default=True)
 
@@ -58,7 +62,7 @@ class Rgba(BaseModel):
         return rgba.to_bytes()
 
 
-UpdateCallbackParams: TypeAlias = tuple[Maze, Palette]
+UpdateCallbackParams: TypeAlias = tuple[Maze, Palette, Callable[[], None]]
 UpdateCallback: TypeAlias = Callable[[UpdateCallbackParams], None]
 
 
@@ -138,14 +142,7 @@ class GraphicalEngine:
     @staticmethod
     def _update(args: tuple["GraphicalEngine", UpdateCallback]) -> None:
         self, callback = args
-
-        callback((self._maze, self._palette))
-
-        if self._palette.flush():
-            self._precompute_lines()
-
-        if self._maze.flush():
-            self._render()
+        callback((self._maze, self._palette, self._render))
 
     def loop(self, callback: UpdateCallback) -> None:
         self._mlx.mlx_loop_hook(
@@ -156,6 +153,14 @@ class GraphicalEngine:
         self._mlx.mlx_loop(self._mlx_ptr)
 
     def _render(self) -> None:
+        palette_updated: bool = False
+        if self._palette.flush():
+            palette_updated = True
+            self._precompute_lines()
+
+        if not palette_updated and not self._maze.flush():
+            return
+
         self._mlx.mlx_clear_window(self._mlx_ptr, self._window)
 
         border_size: int = self._config.border_size
@@ -183,6 +188,14 @@ class GraphicalEngine:
                         self._image_bytes[offset:offset +
                                           self._bpp * cell_size] = self._lines[
                                               "unreachable"]["fill"][(w, e)]
+                    elif flags & CellFlag.ENTRY:
+                        self._image_bytes[offset:offset +
+                                          self._bpp * cell_size] = self._lines[
+                                              "entry"]["fill"][(w, e)]
+                    elif flags & CellFlag.EXIT:
+                        self._image_bytes[offset:offset +
+                                          self._bpp * cell_size] = self._lines[
+                                              "exit"]["fill"][(w, e)]
                     elif (dy >= n_border + space_size and
                           dy < cell_size - s_border - space_size and
                           flags & CellFlag.CURSOR):
@@ -193,6 +206,14 @@ class GraphicalEngine:
                         self._image_bytes[offset:offset +
                                           self._bpp * cell_size] = self._lines[
                                               "path"]["fill"][(w, e)]
+                    elif flags & CellFlag.SEEK:
+                        self._image_bytes[offset:offset +
+                                          self._bpp * cell_size] = self._lines[
+                                              "seek"]["fill"][(w, e)]
+                    elif flags & CellFlag.SEEK_PREMIUM:
+                        self._image_bytes[offset:offset +
+                                          self._bpp * cell_size] = self._lines[
+                                              "seek_premium"]["fill"][(w, e)]
                     else:
                         self._image_bytes[offset:offset +
                                           self._bpp * cell_size] = self._lines[

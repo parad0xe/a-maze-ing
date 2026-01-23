@@ -25,6 +25,9 @@ class CellFlag(IntEnum):
     SEEK = 1 << 5
     PATH = 1 << 6
     UNREACHABLE = 1 << 7
+    SEEK_PREMIUM = 1 << 8
+    ENTRY = 1 << 9
+    EXIT = 1 << 10
 
 
 DIRECTIONS: list[tuple[CellFlag, tuple[int, int]]] = [
