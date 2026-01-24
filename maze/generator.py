@@ -1,9 +1,12 @@
+import logging
 from typing import Iterator
 
-from .maze import CellFlag, Maze
+from .maze import CellState, Maze
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
-def generate(maze: Maze) -> Iterator[tuple[int, int, int]]:
+def generate(maze: Maze) -> Iterator[int]:
     # fmt: off
 
     data = [
@@ -32,6 +35,8 @@ def generate(maze: Maze) -> Iterator[tuple[int, int, int]]:
 
     for y in range(0, maze.height):
         for x in range(0, maze.width):
-            yield (x, y, data[y][x])
-    yield (*maze.entry, CellFlag.ENTRY)
-    yield (*maze.exit, CellFlag.EXIT)
+            maze.set(x, y, data[y][x])
+            yield 1
+    maze.set_state(*maze.entry, CellState.ENTRY)
+    maze.set_state(*maze.exit, CellState.EXIT)
+    yield 1

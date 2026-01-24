@@ -1,29 +1,48 @@
+import logging
 from typing import Any, Callable, TypeAlias
 
+import numpy as np
 from mlx import Mlx
-from pydantic import BaseModel, Field, PrivateAttr
+from pydantic import BaseModel, Field
 
-from .maze import CellFlag, Maze
+from .maze import Cell, CellState, CellWall, Maze
+
+logger: logging.Logger = logging.getLogger(__name__)
+
+UpdateCallback: TypeAlias = Callable[
+    [
+        Maze,
+        "Palette",
+        Any,
+        "GraphicalEngine.Controls",
+    ],
+    None,
+]
+
+PIXEL_DT = np.dtype("u1, u1, u1, u1")
 
 
 class Palette(BaseModel):
-    cursor: int
-    path: int
-    seek: int
-    seek_premium: int
-    border: int
-    unreachable: int
-    default: int
     entry: int
     exit: int
+    unreachable: int
+    cursor: int
+    seek: int
+    seek_premium: int
+    path: int
+    wall: int
+    empty: int
 
-    _is_dirty = PrivateAttr(default=True)
+    _is_dirty = True
 
     def __setattr__(self, name: str, value: Any) -> None:
         super().__setattr__(name, value)
 
         if not name.startswith("_"):
             self._is_dirty = True
+
+    def is_dirty(self) -> bool:
+        return self._is_dirty
 
     def flush(self) -> bool:
         is_dirty: bool = self._is_dirty
@@ -33,7 +52,7 @@ class Palette(BaseModel):
 
 class EngineConfig(BaseModel):
     cell_size: int = Field(frozen=True)
-    border_size: int = Field(frozen=True)
+    wall_size: int = Field(frozen=True)
 
 
 class Rgba(BaseModel):
@@ -61,26 +80,6 @@ class Rgba(BaseModel):
         return rgba.to_bytes()
 
 
-SwitcherCallback: TypeAlias = Callable[[str], None]
-ExitCallback: TypeAlias = Callable[[], None]
-ResetCallback: TypeAlias = Callable[[], None]
-ClearCallback: TypeAlias = Callable[[], None]
-
-UpdateCallbackParams: TypeAlias = tuple[
-    dict[str, Any],
-    Maze,
-    Palette,
-    SwitcherCallback,
-    ExitCallback,
-    ResetCallback,
-    ClearCallback,
-]
-UpdateCallback: TypeAlias = Callable[[UpdateCallbackParams], None]
-
-LoopConfig: TypeAlias = tuple[UpdateCallback, dict[str, Any]]
-LoopConfigCallback: TypeAlias = Callable[[Maze], LoopConfig]
-
-
 class GraphicalEngine:
 
     def __init__(
@@ -88,7 +87,6 @@ class GraphicalEngine:
         maze: Maze,
         config: EngineConfig,
         palette: Palette,
-        loops: dict[str, LoopConfigCallback],
     ) -> None:
         self._maze: Maze = maze
         self._width: int = maze.width * config.cell_size
@@ -103,149 +101,133 @@ class GraphicalEngine:
         self._image = self._mlx.mlx_new_image(
             self._mlx_ptr, self._width, self._height
         )
-
         data: tuple[Any, ...] = self._mlx.mlx_get_data_addr(self._image)
         self._image_bytes: Any = data[0]
         self._bpp: int = data[1] // 8
         self._ppr: int = data[2]
-        self._loop_registry: dict[str, LoopConfigCallback] = loops
-        self._lines: dict[str, dict[tuple[int, int], bytes]] = {}
-        self._precompute_lines()
+        self._tiles: dict = {}
+        self._show_path: bool = True
 
-    def _precompute_lines(self) -> None:
-        border_size: int = self._config.border_size
+        self._compute_tiles()
+        self.controls = GraphicalEngine.Controls(self)
+
+        logger.debug("Graphical engine initialized")
+
+    def _compute_tiles(self) -> None:
+        wall_size: int = self._config.wall_size
         cell_size: int = self._config.cell_size
 
-        border_px: bytes = Rgba.bytes_from_int(self._palette.border)
+        wall_bytes: bytes = Rgba.bytes_from_int(self._palette.wall)
+        wall_pixel = np.frombuffer(wall_bytes, dtype=PIXEL_DT)[0]
 
-        for key in vars(self._palette):
-            pixel: bytes = Rgba.bytes_from_int(getattr(self._palette, key))
+        dump: dict[str, Any] = self._palette.model_dump()
+        pixels: dict = {}
+        for state in CellState:
+            value = dump.get(state.name.lower(), None)
+            if value is None:
+                logger.warning(
+                    f"color {state.name.lower()} not defined in the palette"
+                )
+                continue
+            pixel_bytes = Rgba.bytes_from_int(value)
+            pixels[state.value] = np.frombuffer(pixel_bytes, dtype=PIXEL_DT)[0]
 
-            self._lines[key] = {
-                (0, 0):
-                    pixel * cell_size,
-                (CellFlag.WEST, 0): (border_px * border_size) + pixel *
-                                    (cell_size - border_size),
-                (0, CellFlag.EAST):
-                    pixel * (cell_size - border_size) +
-                    (border_px * border_size),
-                (CellFlag.WEST, CellFlag.EAST):
-                    (border_px * border_size) + pixel *
-                    (cell_size - border_size * 2) + (border_px * border_size),
-            }
+        tiles: dict = {}
+        for state, pixel in pixels.items():
+            for walls in range(16):
+                tile = np.full((cell_size, cell_size), pixel, dtype=PIXEL_DT)
+
+                if walls & CellWall.NORTH:
+                    tile[:wall_size, :] = wall_pixel
+                if walls & CellWall.SOUTH:
+                    tile[-wall_size:, :] = wall_pixel
+                if walls & CellWall.EAST:
+                    tile[:, -wall_size:] = wall_pixel
+                if walls & CellWall.WEST:
+                    tile[:, :wall_size] = wall_pixel
+
+                tiles[(walls, state)] = tile
+
+        self._tiles = tiles
 
     @staticmethod
-    def _update(args: tuple["GraphicalEngine", LoopConfig]) -> None:
+    def _update(
+        args: tuple["GraphicalEngine", tuple[UpdateCallback, Any]],
+    ) -> None:
         self, (callback, context) = args
-        callback((
-            context,
-            self._maze,
-            self._palette,
-            self._get_switcher(),
-            self._exit,
-            self._reset,
-            self._clear,
-        ))
+        callback(self._maze, self._palette, context, self.controls)
 
-        if self._palette.flush():
-            self._precompute_lines()
-            self._render()
-        elif self._maze.flush():
-            self._render()
+        if self._palette.is_dirty():
+            self._compute_tiles()
 
-    def loop(self, loop_key: str) -> None:
-        if loop_key not in self._loop_registry:
-            raise KeyError(f"loop {loop_key} does not exists")
+        if self._palette.flush() or self._maze.flush():
+            self.controls.render()
 
+    def loop(self, callback: UpdateCallback, context: Any) -> None:
         self._mlx.mlx_loop_hook(
             self._mlx_ptr,
             self._update,
-            (self, self._loop_registry[loop_key](self._maze)),
+            (self, (callback, context)),
         )
         self._mlx.mlx_loop(self._mlx_ptr)
 
-    def _get_switcher(self) -> SwitcherCallback:
+    class Controls:
 
-        def switcher(loop_key: str) -> None:
-            if loop_key not in self._loop_registry:
-                raise KeyError(f"loop {loop_key} does not exists")
-            self._mlx.mlx_loop_hook(
-                self._mlx_ptr,
-                self._update,
-                (self, self._loop_registry[loop_key](self._maze)),
+        def __init__(self, engine: "GraphicalEngine") -> None:
+            self._engine: "GraphicalEngine" = engine
+
+        def stop(self) -> None:
+            self._engine._mlx.mlx_loop_exit(self._engine._mlx_ptr)
+
+        def erase(self) -> None:
+            self._engine._maze.mask(walls=0x0, state=0x0)
+            self.render()
+
+        def clear(self) -> None:
+            self._engine._maze.mask(
+                state=(
+                    CellState.UNREACHABLE | CellState.ENTRY | CellState.EXIT
+                )
+            )
+            self.render()
+
+        def toggle_path(self) -> None:
+            self._engine._show_path = not self._engine._show_path
+            self.render()
+
+        def render(self) -> None:
+            self._engine._mlx.mlx_clear_window(
+                self._engine._mlx_ptr, self._engine._window
             )
 
-        return switcher
+            cell_size = self._engine._config.cell_size
 
-    def _exit(self) -> None:
-        self._mlx.mlx_loop_exit(self._mlx_ptr)
+            view_2d = np.frombuffer(
+                self._engine._image_bytes, dtype=PIXEL_DT
+            ).reshape((self._engine._height, self._engine._width))
 
-    def _reset(self) -> None:
-        self._maze.clear()
-        self._render()
-
-    def _clear(self) -> None:
-        for cy in range(self._maze.height):
-            for cx in range(self._maze.width):
-                self._maze.unset(cx, cy, ~0x7F)
-
-    def _render(self) -> None:
-        self._mlx.mlx_clear_window(self._mlx_ptr, self._window)
-
-        border_size: int = self._config.border_size
-        cell_size: int = self._config.cell_size
-
-        for cy in range(self._maze.height):
-            for cx in range(self._maze.width):
-                flags: int = self._maze.get_cell(cx, cy)
-
-                n_border: int = border_size if flags & CellFlag.NORTH else 0
-                s_border: int = border_size if flags & CellFlag.SOUTH else 0
-
-                x0 = cx * cell_size
+            for cy in range(self._engine._maze.height):
                 y0 = cy * cell_size
-                e: int = flags & CellFlag.EAST
-                w: int = flags & CellFlag.WEST
-                for dy in range(cell_size):
-                    offset = (y0 + dy) * self._ppr + (x0 * self._bpp)
-                    if dy < n_border or dy >= cell_size - s_border:
-                        self._image_bytes[offset:offset + self._bpp *
-                                          cell_size] = self._lines["border"][
-                                              (w, e)]
-                    elif flags & CellFlag.UNREACHABLE:
-                        self._image_bytes[offset:offset + self._bpp * cell_size
-                                         ] = self._lines["unreachable"][(w, e)]
-                    elif flags & CellFlag.ENTRY:
-                        self._image_bytes[offset:offset + self._bpp *
-                                          cell_size] = self._lines["entry"][
-                                              (w, e)]
-                    elif flags & CellFlag.EXIT:
-                        self._image_bytes[offset:offset + self._bpp *
-                                          cell_size] = self._lines["exit"][
-                                              (w, e)]
-                    elif (dy >= n_border and dy < cell_size - s_border and
-                          flags & CellFlag.CURSOR):
-                        self._image_bytes[offset:offset + self._bpp *
-                                          cell_size] = self._lines["cursor"][
-                                              (w, e)]
-                    elif flags & CellFlag.PATH and not self._maze.hide_path:
-                        self._image_bytes[offset:offset + self._bpp *
-                                          cell_size] = self._lines["path"][
-                                              (w, e)]
-                    elif flags & CellFlag.SEEK and not self._maze.hide_path:
-                        self._image_bytes[offset:offset + self._bpp *
-                                          cell_size] = self._lines["seek"][
-                                              (w, e)]
-                    elif (flags & CellFlag.SEEK_PREMIUM and
-                          not self._maze.hide_path):
-                        self._image_bytes[offset:offset +
-                                          self._bpp * cell_size] = self._lines[
-                                              "seek_premium"][(w, e)]
-                    else:
-                        self._image_bytes[offset:offset + self._bpp *
-                                          cell_size] = self._lines["default"][
-                                              (w, e)]
 
-        self._mlx.mlx_put_image_to_window(
-            self._mlx_ptr, self._window, self._image, 0, 0
-        )
+                for cx in range(self._engine._maze.width):
+                    x0 = cx * cell_size
+                    cell: Cell = self._engine._maze.get_cell(cx, cy)
+
+                    walls = cell["walls"].item()
+                    state = cell["state"].item()
+
+                    if not self._engine._show_path and state & (
+                            CellState.PATH | CellState.SEEK |
+                            CellState.SEEK_PREMIUM):
+                        state = CellState.EMPTY
+                    view_2d[y0:y0 + cell_size, x0:x0 + cell_size] = (
+                        self._engine._tiles[(walls, state)]
+                    )
+
+            self._engine._mlx.mlx_put_image_to_window(
+                self._engine._mlx_ptr,
+                self._engine._window,
+                self._engine._image,
+                0,
+                0,
+            )

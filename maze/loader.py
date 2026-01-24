@@ -36,4 +36,4 @@ def load(input_file: str) -> Maze:
             if not value:
                 raise ParseError("Value cannot be empty")
             values[key] = value
-    return Maze.model_validate(values)
+    return Maze(**values)
