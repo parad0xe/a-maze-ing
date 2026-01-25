@@ -1,6 +1,6 @@
 import logging
 from enum import IntEnum
-from typing import Annotated, Any, Iterator, TypeAlias
+from typing import Annotated, Any, TypeAlias
 
 import numpy as np
 import numpy.typing as npt
@@ -45,11 +45,18 @@ class WallDescriptor:
         (CellWall.EAST, (1, 0)),
     ]
 
-    opposites: dict[int, tuple[CellWall, tuple[int, int]]] = {
+    opposites: dict[CellWall, tuple[CellWall, tuple[int, int]]] = {
         CellWall.NORTH: (CellWall.SOUTH, (0, -1)),
         CellWall.SOUTH: (CellWall.NORTH, (0, 1)),
         CellWall.WEST: (CellWall.EAST, (-1, 0)),
         CellWall.EAST: (CellWall.WEST, (1, 0)),
+    }
+
+    adjacents: dict[CellWall, tuple[CellWall, CellWall]] = {
+        CellWall.NORTH: (CellWall.WEST, CellWall.EAST),
+        CellWall.SOUTH: (CellWall.WEST, CellWall.EAST),
+        CellWall.EAST: (CellWall.NORTH, CellWall.SOUTH),
+        CellWall.WEST: (CellWall.NORTH, CellWall.SOUTH),
     }
 
 
@@ -135,13 +142,15 @@ class Maze(BaseModel):
             _, state = self._demux(state)
             self.array["state"] &= state
 
-    def set(self, x: int, y: int, flags: int) -> None:
-        if self.is_out_of_bounds(x, y):
-            raise ValueError(f"out of bound ({x}, {y})")
-        walls, state = self._demux(flags)
-        self.array[y][x]["state"] = state
-        if self._apply_walls(x, y, walls, on=True):
-            self._sync_neighbours(x, y, walls, on=True)
+    def set(
+        self,
+        walls: int | None = None,
+        state: int | None = None,
+    ) -> None:
+        if state is not None:
+            self.array["state"] = state
+        if walls is not None:
+            self.array["walls"] = walls
 
     def set_walls(self, x: int, y: int, walls: int) -> None:
         if self.is_out_of_bounds(x, y):
@@ -162,19 +171,6 @@ class Maze(BaseModel):
             raise ValueError(f"out of bound ({x}, {y})")
         _, state = self._demux(state)
         self.array[y][x]["state"] = state
-
-    def iter_neighbours(self, x: int, y: int) -> Iterator[tuple[int, int]]:
-        if self.is_out_of_bounds(x, y):
-            raise ValueError(f"out of bound ({x}, {y})")
-
-        for wall, (dx, dy) in WallDescriptor.walls:
-            nx = x + dx
-            ny = y + dy
-
-            if self.is_out_of_bounds(nx, dy):
-                continue
-            if not self.has_walls(x, y, wall):
-                yield (nx, ny)
 
     def has_walls(
         self, x: int, y: int, walls: int, strict: bool = True

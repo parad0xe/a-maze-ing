@@ -163,7 +163,11 @@ class GraphicalEngine:
         if self._palette.flush() or self._maze.flush():
             self.controls.render()
 
-    def loop(self, callback: UpdateCallback, context: Any) -> None:
+    def loop(
+        self,
+        callback: UpdateCallback,
+        context: Any = None,
+    ) -> None:
         self._mlx.mlx_loop_hook(
             self._mlx_ptr,
             self._update,
@@ -180,7 +184,7 @@ class GraphicalEngine:
             self._engine._mlx.mlx_loop_exit(self._engine._mlx_ptr)
 
         def erase(self) -> None:
-            self._engine._maze.mask(walls=0x0, state=0x0)
+            self._engine._maze.set(walls=0xF, state=0x0)
             self.render()
 
         def clear(self) -> None:
