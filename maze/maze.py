@@ -103,11 +103,11 @@ class Maze(BaseModel):
             if name == "entry":
                 x, y = value
                 self.set_state(*self.entry, CellState.EMPTY)
-                self.set(x, y, CellState.ENTRY)
+                self.set_state(x, y, CellState.ENTRY)
             elif name == "exit":
                 x, y = value
                 self.set_state(*self.exit, CellState.EMPTY)
-                self.set(x, y, CellState.EXIT)
+                self.set_state(x, y, CellState.EXIT)
         super().__setattr__(name, value)
 
     @field_validator("entry", "exit", mode="before")
