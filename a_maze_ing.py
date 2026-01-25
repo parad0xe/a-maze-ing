@@ -127,6 +127,7 @@ def main(argc: int, argv: list[str]) -> None:
         logger.error(
             f"Usage: python3 {os.path.basename(__file__)} <config_file>"
         )
+        sys.exit(1)
 
     try:
         maze: Maze = load(argv[1])
