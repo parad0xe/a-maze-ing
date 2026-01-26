@@ -110,6 +110,7 @@ class GraphicalEngine:
 
         self._compute_tiles()
         self.controls = GraphicalEngine.Controls(self)
+        self.controls.render()
 
         logger.debug("Graphical engine initialized")
 
@@ -183,8 +184,8 @@ class GraphicalEngine:
         def stop(self) -> None:
             self._engine._mlx.mlx_loop_exit(self._engine._mlx_ptr)
 
-        def erase(self) -> None:
-            self._engine._maze.set(walls=0xF, state=0x0)
+        def reinitialize(self) -> None:
+            self._engine._maze.initialize()
             self.render()
 
         def clear(self) -> None:

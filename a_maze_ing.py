@@ -86,7 +86,7 @@ def update(
     )
     match command:
         case "g":
-            controls.erase()
+            controls.reinitialize()
             try:
                 for _ in generate(maze):
                     controls.render()
@@ -143,13 +143,13 @@ def main(argc: int, argv: list[str]) -> None:
 
     engine = GraphicalEngine(
         maze=maze,
-        config=EngineConfig(wall_size=2, cell_size=50),
+        config=EngineConfig(wall_size=2, cell_size=40),
         palette=Palette(
             empty=0x000000FF,
             wall=0x0000AAFF,
             unreachable=0xAAAAAAFF,
             cursor=0x00FF00FF,
-            path=0xFF0000AA,
+            path=0xFF000055,
             seek=0x00FF0033,
             seek_premium=0xFF00FFAA,
             entry=0xFFFFFFFF,

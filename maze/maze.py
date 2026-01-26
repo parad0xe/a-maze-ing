@@ -52,15 +52,8 @@ class WallDescriptor:
         CellWall.EAST: (CellWall.WEST, (1, 0)),
     }
 
-    adjacents: dict[CellWall, tuple[CellWall, CellWall]] = {
-        CellWall.NORTH: (CellWall.WEST, CellWall.EAST),
-        CellWall.SOUTH: (CellWall.WEST, CellWall.EAST),
-        CellWall.EAST: (CellWall.NORTH, CellWall.SOUTH),
-        CellWall.WEST: (CellWall.NORTH, CellWall.SOUTH),
-    }
 
-
-MAP_DATA_DT = np.dtype([("walls", np.int16), ("state", np.int16)])
+MAZE_ARRAY_DT = np.dtype([("walls", np.int16), ("state", np.int16)])
 MazeArray: TypeAlias = npt.NDArray[np.void]
 Cell: TypeAlias = np.void
 
@@ -76,7 +69,7 @@ class Maze(BaseModel):
     output_file: str = Field(min_length=1)
 
     array: Annotated[MazeArray, SkipValidation] = Field(
-        default_factory=lambda: np.zeros((0, 0), dtype=MAP_DATA_DT)
+        default_factory=lambda: np.zeros((0, 0), dtype=MAZE_ARRAY_DT)
     )
 
     _is_dirty: bool = PrivateAttr(default=True)
@@ -94,7 +87,8 @@ class Maze(BaseModel):
         logger.debug(
             f"Initialize map data with zeros ({self.width} x {self.height})"
         )
-        self.array = np.zeros((self.height, self.width), dtype=MAP_DATA_DT)
+        self.array = np.zeros((self.height, self.width), dtype=MAZE_ARRAY_DT)
+        self.initialize()
         logger.debug("Maze model intialized")
 
     def __setattr__(self, name, value: Any):
@@ -129,6 +123,31 @@ class Maze(BaseModel):
         self._is_dirty = False
         return was_dirty
 
+    def initialize(self) -> None:
+        self.set(walls=0xF, state=0x0)
+        self.display_life_answer()
+
+    def display_life_answer(self) -> None:
+        # fmt: off
+        answer = np.array([
+            [1, 0, 0, 0, 1, 1, 1],
+            [1, 0, 0, 0, 0, 0, 1],
+            [1, 1, 1, 0, 1, 1, 1],
+            [0, 0, 1, 0, 1, 0, 0],
+            [0, 0, 1, 0, 1, 1, 1],
+        ], dtype=np.int16) * CellState.UNREACHABLE
+        # fmt: on
+
+        sx: int = (self.width // 2) - (answer.shape[1] // 2)
+        sy: int = (self.height // 2) - (answer.shape[0] // 2)
+        ex: int = sx + answer.shape[1]
+        ey: int = sy + answer.shape[0]
+
+        if ex >= self.width or ey >= self.height:
+            raise ValueError("maze is too small for display the life answer")
+
+        self.array[sy:ey, sx:ex]["state"] |= answer
+
     def get_cell(self, x: int, y: int) -> Cell:
         if self.is_out_of_bounds(x, y):
             raise ValueError(f"out of bound ({x}, {y})")
@@ -148,9 +167,23 @@ class Maze(BaseModel):
         state: int | None = None,
     ) -> None:
         if state is not None:
+            _, state = self._demux(state)
             self.array["state"] = state
         if walls is not None:
+            walls, _ = self._demux(walls)
             self.array["walls"] = walls
+
+    def unset(
+        self,
+        walls: int | None = None,
+        state: int | None = None,
+    ) -> None:
+        if state is not None:
+            _, state = self._demux(state)
+            self.array["state"] &= ~state
+        if walls is not None:
+            walls, _ = self._demux(walls)
+            self.array["walls"] &= ~walls
 
     def set_walls(self, x: int, y: int, walls: int) -> None:
         if self.is_out_of_bounds(x, y):

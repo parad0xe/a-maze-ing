@@ -71,6 +71,9 @@ def solve(maze: Maze) -> Iterator[int]:
                     cell_data(brd, e_x, e_y, n_x, n_y, cur["step"] + 1, cur)
                 )
 
+    maze.unset(state=(CellState.SEEK | CellState.SEEK_PREMIUM))
+    yield 1
+
     while cur is not None:
         if not maze.get_cell(
                 cur["x"],
