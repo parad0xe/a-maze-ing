@@ -179,7 +179,7 @@ class Maze(BaseModel):
         if ex >= self.width or ey >= self.height:
             raise ValueError("maze is too small for display the life answer")
 
-        self.array[sy:ey, sx:ex]["state"] |= answer
+        self.array[sy:ey, sx:ex]["state"] = answer
 
     def get_cell(self, x: int, y: int) -> Cell:
         if self.is_out_of_bounds(x, y):
