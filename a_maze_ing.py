@@ -14,7 +14,7 @@ from maze.engine import (
     Palette,
 )
 from maze.generator import generate
-from maze.loader import ParseError, load
+from maze.loader import load
 from maze.solving import solve
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -49,9 +49,9 @@ LOGGING_CONFIG = {
 
 def random_color() -> int:
     color = 0
-    color |= random.randint(0x22, 0xDD) << 24
-    color |= random.randint(0x22, 0xDD) << 16
-    color |= random.randint(0x22, 0xDD) << 8
+    color |= random.randint(0x55, 0xFF) << 24
+    color |= random.randint(0x55, 0xFF) << 16
+    color |= random.randint(0x55, 0xFF) << 8
     color |= 0xFF
     return color
 
@@ -103,17 +103,11 @@ def update(
             controls.toggle_path()
         case "r":
             for key in vars(palette):
-                setattr(palette, key, random_color())
+                if key != "empty":
+                    setattr(palette, key, random_color())
         case "n":
-            maze.entry = (
-                random.randint(0, maze.width - 1),
-                random.randint(0, maze.height - 1),
-            )
-            maze.exit = (
-                random.randint(0, maze.width - 1),
-                random.randint(0, maze.height - 1),
-            )
             controls.clear()
+            maze.random_entry_exit()
         case "q":
             controls.stop()
 
@@ -137,7 +131,7 @@ def main(argc: int, argv: list[str]) -> None:
             message = error["msg"]
             logger.error(f"{type(e).__name__}: {message} ({field}) ")
         sys.exit(1)
-    except (OSError, ParseError, FileNotFoundError) as e:
+    except Exception as e:
         logger.error(f"{type(e).__name__}: {e}")
         sys.exit(1)
 

@@ -1,4 +1,5 @@
 import logging
+import random
 from enum import IntEnum
 from typing import Annotated, Any, TypeAlias
 
@@ -89,6 +90,12 @@ class Maze(BaseModel):
         )
         self.array = np.zeros((self.height, self.width), dtype=MAZE_ARRAY_DT)
         self.initialize()
+
+        if self.get_cell(*self.entry)["state"] & CellState.UNREACHABLE:
+            raise ValueError("entry cannot be spawn on unreachable cell")
+        if self.get_cell(*self.exit)["state"] & CellState.UNREACHABLE:
+            raise ValueError("entry cannot be spawn on unreachable cell")
+
         logger.debug("Maze model intialized")
 
     def __setattr__(self, name, value: Any):
@@ -96,10 +103,18 @@ class Maze(BaseModel):
             self._is_dirty = True
             if name == "entry":
                 x, y = value
+                if self.get_cell(x, y)["state"] & CellState.UNREACHABLE:
+                    raise ValueError(
+                        "entry cannot be spawn on unreachable cell"
+                    )
                 self.set_state(*self.entry, CellState.EMPTY)
                 self.set_state(x, y, CellState.ENTRY)
             elif name == "exit":
                 x, y = value
+                if self.get_cell(x, y)["state"] & CellState.UNREACHABLE:
+                    raise ValueError(
+                        "exit cannot be spawn on unreachable cell"
+                    )
                 self.set_state(*self.exit, CellState.EMPTY)
                 self.set_state(x, y, CellState.EXIT)
         super().__setattr__(name, value)
@@ -126,6 +141,24 @@ class Maze(BaseModel):
     def initialize(self) -> None:
         self.set(walls=0xF, state=0x0)
         self.display_life_answer()
+
+    def random_entry_exit(self) -> None:
+        while True:
+            new_entry: tuple[int, int] = (
+                random.randint(0, self.width - 1),
+                random.randint(0, self.height - 1),
+            )
+            if not self.get_cell(*new_entry)["state"] & CellState.UNREACHABLE:
+                break
+        self.entry = new_entry
+        while True:
+            new_exit: tuple[int, int] = (
+                random.randint(0, self.width - 1),
+                random.randint(0, self.height - 1),
+            )
+            if not self.get_cell(*new_exit)["state"] & CellState.UNREACHABLE:
+                break
+        self.exit = new_exit
 
     def display_life_answer(self) -> None:
         # fmt: off
