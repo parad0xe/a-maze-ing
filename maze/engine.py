@@ -185,10 +185,12 @@ class GraphicalEngine:
             self._engine._mlx.mlx_loop_exit(self._engine._mlx_ptr)
 
         def reinitialize(self) -> None:
+            self._engine._show_path = True
             self._engine._maze.initialize()
             self.render()
 
         def clear(self) -> None:
+            self._engine._show_path = True
             self._engine._maze.mask(
                 state=(
                     CellState.UNREACHABLE | CellState.ENTRY | CellState.EXIT
