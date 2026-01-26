@@ -8,9 +8,16 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 
 def generate(maze: Maze) -> Iterator[int]:
-    viewed: list[tuple[int, int]] = [(0, 0)]
+    viewed: list[tuple[int, int]] = []
     path: list[tuple[int, int]] = [(0, 0)]
+    turn: int = 0
+    last_by_prob: bool = False
+
+    if maze.perfect:
+        viewed.append((0, 0))
+
     while True:
+        turn += 1
         if len(path) == 0:
             break
         cx, cy = path[-1]
@@ -19,13 +26,22 @@ def generate(maze: Maze) -> Iterator[int]:
         added = False
         random_walls = WallDescriptor.walls.copy()
         random.shuffle(random_walls)
+        prob: float = random.random()
+        prob_ok: bool = False
         for wall, (dx, dy) in random_walls:
             nx = cx + dx
             ny = cy + dy
             if not maze.is_out_of_bounds(nx, ny):
                 next_cell = maze.get_cell(nx, ny)
-                if (nx, ny) not in viewed and next_cell[
-                        "state"] != CellState.UNREACHABLE:
+                if (not maze.perfect and turn % 10 == 0 and prob < 0.5 and
+                        not last_by_prob):
+                    prob_ok = True
+                else:
+                    last_by_prob = False
+                if next_cell["state"] != CellState.UNREACHABLE and (
+                        prob_ok or (nx, ny) not in viewed):
+                    if (nx, ny) in viewed:
+                        last_by_prob = True
                     maze.unset_walls(cx, cy, wall)
                     viewed.append((nx, ny))
                     path.append((nx, ny))
