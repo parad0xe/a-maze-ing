@@ -5,7 +5,8 @@ import numpy as np
 from mlx import Mlx
 from pydantic import BaseModel, Field
 
-from .maze import Cell, CellState, CellWall, Maze
+from maze.colors import Palette, Rgba
+from maze.maze import Cell, CellState, CellWall, Maze
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -13,7 +14,7 @@ KeypressCallback: TypeAlias = Callable[
     [
         int,
         Maze,
-        "Palette",
+        Palette,
         Any,
         "GraphicalEngine.Controls",
     ],
@@ -22,7 +23,7 @@ KeypressCallback: TypeAlias = Callable[
 UpdateCallback: TypeAlias = Callable[
     [
         Maze,
-        "Palette",
+        Palette,
         Any,
         "GraphicalEngine.Controls",
     ],
@@ -32,62 +33,9 @@ UpdateCallback: TypeAlias = Callable[
 PIXEL_DT = np.dtype("u1, u1, u1, u1")
 
 
-class Palette(BaseModel):
-    entry: int
-    exit: int
-    unreachable: int
-    cursor: int
-    seek: int
-    seek_premium: int
-    path: int
-    wall: int
-    empty: int
-
-    _is_dirty = True
-
-    def __setattr__(self, name: str, value: Any) -> None:
-        super().__setattr__(name, value)
-
-        if not name.startswith("_"):
-            self._is_dirty = True
-
-    def is_dirty(self) -> bool:
-        return self._is_dirty
-
-    def flush(self) -> bool:
-        is_dirty: bool = self._is_dirty
-        self._is_dirty = False
-        return is_dirty
-
-
 class EngineConfig(BaseModel):
     cell_size: int = Field(frozen=True)
     wall_size: int = Field(frozen=True)
-
-
-class Rgba(BaseModel):
-    r: int
-    g: int
-    b: int
-    a: int
-
-    def to_bytes(self) -> bytes:
-        return bytes([self.b, self.g, self.r, self.a])
-
-    @staticmethod
-    def from_int(color: int) -> "Rgba":
-        rgba = Rgba(
-            a=color & 0xFF,
-            r=(color >> 24) & 0xFF,
-            g=(color >> 16) & 0xFF,
-            b=(color >> 8) & 0xFF,
-        )
-        return rgba
-
-    @staticmethod
-    def bytes_from_int(color: int) -> bytes:
-        rgba = Rgba.from_int(color)
-        return rgba.to_bytes()
 
 
 class GraphicalEngine:

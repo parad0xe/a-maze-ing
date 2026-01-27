@@ -1,7 +1,6 @@
 import logging
 import logging.config
 import os
-import random
 import sys
 from dataclasses import dataclass
 from typing import Iterator
@@ -9,10 +8,10 @@ from typing import Iterator
 from pydantic import ValidationError
 
 from maze import Maze
+from maze.colors import Palette, random_color
 from maze.engine import (
     EngineConfig,
     GraphicalEngine,
-    Palette,
 )
 from maze.generator import generate
 from maze.loader import load
@@ -46,15 +45,6 @@ LOGGING_CONFIG = {
         },
     },
 }
-
-
-def random_color() -> int:
-    color = 0
-    color |= random.randint(0x55, 0xFF) << 24
-    color |= random.randint(0x55, 0xFF) << 16
-    color |= random.randint(0x55, 0xFF) << 8
-    color |= 0xFF
-    return color
 
 
 @dataclass
@@ -104,13 +94,15 @@ def update(
 
     if context.generator is not None:
         try:
-            next(context.generator)
+            while next(context.generator):
+                controls.render()
         except StopIteration:
             context.generator = None
             pass
     if context.solver is not None:
         try:
-            next(context.solver)
+            while next(context.solver):
+                controls.render()
         except StopIteration:
             context.solver = None
             pass
