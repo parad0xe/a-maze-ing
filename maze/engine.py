@@ -9,6 +9,16 @@ from .maze import Cell, CellState, CellWall, Maze
 
 logger: logging.Logger = logging.getLogger(__name__)
 
+KeypressCallback: TypeAlias = Callable[
+    [
+        int,
+        Maze,
+        "Palette",
+        Any,
+        "GraphicalEngine.Controls",
+    ],
+    int,
+]
 UpdateCallback: TypeAlias = Callable[
     [
         Maze,
@@ -158,17 +168,28 @@ class GraphicalEngine:
         self, (callback, context) = args
         callback(self._maze, self._palette, context, self.controls)
 
-        if self._palette.is_dirty():
+        if self._palette.flush():
             self._compute_tiles()
 
-        if self._palette.flush() or self._maze.flush():
-            self.controls.render()
+    @staticmethod
+    def _keypress(keycode: int, args: tuple["GraphicalEngine", Any]) -> int:
+        self, (callback, context) = args
+        return callback(
+            keycode, self._maze, self._palette, context, self.controls
+        )
 
     def loop(
         self,
         callback: UpdateCallback,
+        keypress: KeypressCallback | None = None,
         context: Any = None,
     ) -> None:
+        if keypress is not None:
+            self._mlx.mlx_key_hook(
+                self._window,
+                self._keypress,
+                (self, (keypress, context)),
+            )
         self._mlx.mlx_loop_hook(
             self._mlx_ptr,
             self._update,

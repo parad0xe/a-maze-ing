@@ -9,7 +9,6 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
-    PrivateAttr,
     SkipValidation,
     field_validator,
 )
@@ -73,8 +72,6 @@ class Maze(BaseModel):
         default_factory=lambda: np.zeros((0, 0), dtype=MAZE_ARRAY_DT)
     )
 
-    _is_dirty: bool = PrivateAttr(default=True)
-
     def model_post_init(self, _: Any) -> None:
         if self.is_out_of_bounds(*self.entry):
             raise ValueError(
@@ -100,7 +97,6 @@ class Maze(BaseModel):
 
     def __setattr__(self, name, value: Any):
         if not name.startswith("_"):
-            self._is_dirty = True
             if name == "entry":
                 x, y = value
                 if self.get_cell(x, y)["state"] & CellState.UNREACHABLE:
@@ -129,14 +125,6 @@ class Maze(BaseModel):
                 raise ValueError(f"Invalid coordinate ({v})")
             return (coords[0], coords[1])
         return v
-
-    def is_dirty(self) -> bool:
-        return self._is_dirty
-
-    def flush(self) -> bool:
-        was_dirty: bool = self._is_dirty
-        self._is_dirty = False
-        return was_dirty
 
     def initialize(self) -> None:
         self.set(walls=0xF, state=0x0)

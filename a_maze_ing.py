@@ -4,6 +4,7 @@ import os
 import random
 import sys
 from dataclasses import dataclass
+from typing import Iterator
 
 from pydantic import ValidationError
 
@@ -59,6 +60,37 @@ def random_color() -> int:
 @dataclass
 class Context:
     frame: int = 0
+    generator: Iterator[int] | None = None
+    solver: Iterator[int] | None = None
+
+
+def keypress(
+    keycode: int,
+    maze: Maze,
+    palette: Palette,
+    context: Context,
+    controls: GraphicalEngine.Controls,
+) -> int:
+    match keycode:
+        case 103:  # g
+            controls.reinitialize()
+            context.generator = generate(maze)
+        case 99:  # c
+            controls.clear()
+            context.solver = solve(maze)
+        case 113:  # q
+            controls.stop()
+        case 114:  # r
+            for key in vars(palette):
+                if key != "empty":
+                    setattr(palette, key, random_color())
+        case 110:  # n
+            controls.clear()
+            maze.random_entry_exit()
+        case 115:  # s
+            controls.toggle_path()
+
+    return 0
 
 
 def update(
@@ -70,46 +102,18 @@ def update(
     logger.debug(f"update {context.frame}")
     context.frame += 1
 
-    command = (
-        input(
-            """
-            === A-Maze-Ing ===
-            [g] Re-generate a new maze
-            [c] Compute path from entry to exit
-            [s] Show/Hide path from entry to exit
-            [r] Rotate maze colors
-            [n] New random entry and exit points
-            [q] Quit
-            Choice ? [g/c/s/r/n/q]: 
-            """
-        ).strip().lower()
-    )
-    match command:
-        case "g":
-            controls.reinitialize()
-            try:
-                for _ in generate(maze):
-                    controls.render()
-            except StopIteration:
-                pass
-        case "c":
-            controls.clear()
-            try:
-                for _ in solve(maze):
-                    controls.render()
-            except StopIteration:
-                pass
-        case "s":
-            controls.toggle_path()
-        case "r":
-            for key in vars(palette):
-                if key != "empty":
-                    setattr(palette, key, random_color())
-        case "n":
-            controls.clear()
-            maze.random_entry_exit()
-        case "q":
-            controls.stop()
+    if context.generator is not None:
+        try:
+            next(context.generator)
+        except StopIteration:
+            context.generator = None
+            pass
+    if context.solver is not None:
+        try:
+            next(context.solver)
+        except StopIteration:
+            context.solver = None
+            pass
 
     controls.render()
 
@@ -150,8 +154,24 @@ def main(argc: int, argv: list[str]) -> None:
             exit=0xFFFFFFFF,
         ),
     )
+
+    print(
+        """
+            === A-Maze-Ing ===
+            [g] Re-generate a new maze
+            [c] Compute path from entry to exit
+            [s] Show/Hide path from entry to exit
+            [r] Rotate maze colors
+            [n] New random entry and exit points
+            [q] Quit
+            Choice ? [g/c/s/r/n/q]:
+            """,
+        flush=True,
+    )
+
     engine.loop(
         update,
+        keypress=keypress,
         context=Context(),
     )
 
