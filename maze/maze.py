@@ -68,6 +68,7 @@ class Maze(BaseModel):
     perfect: bool
     output_file: str = Field(min_length=1)
     dirs: list[str] = Field(default_factory=list)
+    seed: int | None = None
 
     array: Annotated[MazeArray, SkipValidation] = Field(
         default_factory=lambda: np.zeros((0, 0), dtype=MAZE_ARRAY_DT)

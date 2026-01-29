@@ -4,6 +4,7 @@ import os
 import sys
 from dataclasses import dataclass
 from typing import Iterator
+import random
 
 from pydantic import ValidationError
 
@@ -136,6 +137,7 @@ def main(argc: int, argv: list[str]) -> None:
         logger.error(f"{type(e).__name__}: {e}")
         sys.exit(2)
 
+    random.seed(maze.seed)
     engine = GraphicalEngine(
         maze=maze,
         config=EngineConfig(wall_size=2, cell_size=40),
@@ -151,12 +153,6 @@ def main(argc: int, argv: list[str]) -> None:
             exit=0xFFFFFFFF,
         ),
     )
-
-    ctx = Context()
-    ctx.generator = generate(maze)
-    update(maze, engine._palette, ctx, engine.controls)
-    ctx.solver = solve(maze)
-    update(maze, engine._palette, ctx, engine.controls)
 
     print(
         """
@@ -175,7 +171,7 @@ def main(argc: int, argv: list[str]) -> None:
     engine.loop(
         update,
         keypress=keypress,
-        context=Context(),
+        context=Context(generator=generate(maze), solver=solve(maze))
     )
 
 
