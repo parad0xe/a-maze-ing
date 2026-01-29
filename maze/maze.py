@@ -269,7 +269,7 @@ class Maze(BaseModel):
 
     def export(self) -> None:
         logger.debug("Generating file")
-        with open(self.output_file, "w") as f:
+        with open(self.output_file, "w", encoding="utf-8") as f:
             i_x, i_y, e_x, e_y = (*self.entry, *self.exit)
             h, w = self.height, self.width
             dirs: str = "".join(reversed(self.dirs))
