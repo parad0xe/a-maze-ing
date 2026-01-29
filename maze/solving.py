@@ -74,11 +74,25 @@ def solve(maze: Maze) -> Iterator[int]:
     maze.unset(state=(CellState.SEEK | CellState.SEEK_PREMIUM))
     yield 1
 
+    maze.dirs.clear()
     while cur is not None:
+        parent = cur["parent"]
+        if parent is not None:
+            dx = cur["x"] - parent["x"]
+            dy = cur["y"] - parent["y"]
+
+            if dx == 1 and dy == 0:
+                maze.dirs.append("E")
+            elif dx == -1 and dy == 0:
+                maze.dirs.append("W")
+            elif dx == 0 and dy == 1:
+                maze.dirs.append("S")
+            elif dx == 0 and dy == -1:
+                maze.dirs.append("N")
+
         if not maze.get_cell(
-                cur["x"],
-                cur["y"],
+            cur["x"], cur["y"]
         )["state"] & (CellState.ENTRY | CellState.EXIT):
             maze.set_state(cur["x"], cur["y"], CellState.PATH)
-        cur = cur["parent"]
+        cur = parent
         yield 1

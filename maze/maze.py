@@ -67,6 +67,7 @@ class Maze(BaseModel):
     exit: tuple[int, int]
     perfect: bool
     output_file: str = Field(min_length=1)
+    dirs: list[str] = Field(default_factory=list)
 
     array: Annotated[MazeArray, SkipValidation] = Field(
         default_factory=lambda: np.zeros((0, 0), dtype=MAZE_ARRAY_DT)
@@ -265,3 +266,20 @@ class Maze(BaseModel):
         walls = flags & 0xF
         state = flags & ~0xF
         return (walls, state)
+
+    def export(self) -> None:
+        logger.debug("Generating file")
+        with open(self.output_file, "w") as f:
+            i_x, i_y, e_x, e_y = (*self.entry, *self.exit)
+            h, w = self.height, self.width
+            dirs: str = "".join(reversed(self.dirs))
+            for y in range(h):
+                f.write("".join(
+                    format(int(self.array[y, x]["walls"]), "X")
+                    for x in range(w)
+                ))
+                f.write("\n")
+            f.write("\n")
+            f.write(f"{i_x},{i_y}\n")
+            f.write(f"{e_x},{e_y}\n")
+            f.write(f"{dirs}")
