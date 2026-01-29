@@ -13,11 +13,10 @@ PYTHON := $(VENV)/bin/python3
 FLAKE8 := $(PYTHON) -m flake8
 MYPY := $(PYTHON) -m mypy
 PIP := $(PYTHON) -m pip
-POETRY := POETRY_VIRTUALENVS_CREATE=false $(PYTHON) -m poetry
+POETRY := POETRY_VIRTUALENVS_IN_PROJECT=true poetry
 
 # user rules
 install: pyproject.toml $(PYTHON)
-	$(POETRY) env use $(PYTHON)
 	$(POETRY) install
 
 run: install
@@ -40,6 +39,7 @@ clean:
 
 clean-venv:
 	rm -rf $(VENV)
+	rm poetry.lock
 
 # build rule
 $(PYTHON):
