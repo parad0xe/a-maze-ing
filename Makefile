@@ -2,7 +2,7 @@
 DIRS := . maze
 MAIN := a_maze_ing.py
 ARGS ?= config.txt
-VENV ?= venv
+VENV := .venv
 
 PYCACHES = $(addsuffix /__pycache__,$(DIRS))
 MYPYCACHES = $(addsuffix /.mypy_cache,$(DIRS))
@@ -17,6 +17,7 @@ POETRY := POETRY_VIRTUALENVS_CREATE=false $(PYTHON) -m poetry
 
 # user rules
 install: pyproject.toml $(PYTHON)
+	$(POETRY) env use $(PYTHON)
 	$(POETRY) install
 
 run: install
