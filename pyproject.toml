@@ -8,3 +8,11 @@ python = ">=3.10"
 pydantic = "2.12.5"
 numpy = "2.2.6"
 mlx = { path = "libs/mlx-2.2-py3-none-any.whl" }
+
+[[tool.mypy.overrides]]
+module = "mlx.*"
+ignore_missing_imports = true
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
