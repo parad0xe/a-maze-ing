@@ -152,6 +152,12 @@ def main(argc: int, argv: list[str]) -> None:
         ),
     )
 
+    ctx = Context()
+    ctx.generator = generate(maze)
+    update(maze, engine._palette, ctx, engine.controls)
+    ctx.solver = solve(maze)
+    update(maze, engine._palette, ctx, engine.controls)
+
     print(
         """
             === A-Maze-Ing ===
