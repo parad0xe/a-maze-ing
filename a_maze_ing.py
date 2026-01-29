@@ -12,6 +12,7 @@ from maze.colors import Palette, random_color
 from maze.engine import (
     EngineConfig,
     GraphicalEngine,
+    KeyCode,
 )
 from maze.generator import generate
 from maze.loader import load
@@ -62,22 +63,22 @@ def keypress(
     controls: GraphicalEngine.Controls,
 ) -> int:
     match keycode:
-        case 103:  # g
+        case KeyCode.G:
             controls.reinitialize()
             context.generator = generate(maze)
-        case 99:  # c
+        case KeyCode.C:
             controls.clear()
             context.solver = solve(maze)
-        case 113:  # q
+        case KeyCode.Q:
             controls.stop()
-        case 114:  # r
+        case KeyCode.R:
             for key in vars(palette):
                 if key != "empty":
                     setattr(palette, key, random_color())
-        case 110:  # n
+        case KeyCode.N:
             controls.clear()
             maze.random_entry_exit()
-        case 115:  # s
+        case KeyCode.S:
             controls.toggle_path()
 
     return 0

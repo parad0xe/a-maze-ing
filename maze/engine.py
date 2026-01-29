@@ -1,4 +1,5 @@
 import logging
+from enum import IntEnum
 from typing import Any, Callable, TypeAlias
 
 import numpy as np
@@ -31,6 +32,15 @@ UpdateCallback: TypeAlias = Callable[
 ]
 
 PIXEL_DT = np.dtype("u1, u1, u1, u1")
+
+
+class KeyCode(IntEnum):
+    C = 99
+    G = 103
+    N = 110
+    Q = 113
+    R = 114
+    S = 115
 
 
 class EngineConfig(BaseModel):
