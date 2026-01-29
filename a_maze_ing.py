@@ -106,7 +106,11 @@ def update(
                 controls.render()
         except StopIteration:
             context.solver = None
-            pass
+            try:
+                maze.export()
+            except (OSError, UnicodeEncodeError) as e:
+                logger.error(f"export failed: {type(e).__name__}: {e}")
+                sys.exit(3)
 
     controls.render()
 
@@ -127,10 +131,10 @@ def main(argc: int, argv: list[str]) -> None:
             field = " -> ".join(str(item) for item in error["loc"])
             message = error["msg"]
             logger.error(f"{type(e).__name__}: {message} ({field}) ")
-        sys.exit(1)
+        sys.exit(2)
     except Exception as e:
         logger.error(f"{type(e).__name__}: {e}")
-        sys.exit(1)
+        sys.exit(2)
 
     engine = GraphicalEngine(
         maze=maze,
