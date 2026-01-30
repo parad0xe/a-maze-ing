@@ -6,12 +6,13 @@ VENV := .venv
 
 PYCACHES = $(addsuffix /__pycache__,$(DIRS))
 MYPYCACHES = $(addsuffix /.mypy_cache,$(DIRS))
+EXCLUDE = --exclude $(VENV)
 
 # tools
 MAKEFLAGS += -j $$(nproc)
 PYTHON := $(VENV)/bin/python3
-FLAKE8 := $(PYTHON) -m flake8
-MYPY := $(PYTHON) -m mypy
+FLAKE8 := $(PYTHON) -m flake8 $(EXCLUDE)
+MYPY := $(PYTHON) -m mypy $(EXCLUDE)
 PIP := $(PYTHON) -m pip
 POETRY := POETRY_VIRTUALENVS_IN_PROJECT=true $(PYTHON) -m poetry
 
