@@ -50,6 +50,13 @@ LOGGING_CONFIG = {
 }
 
 
+def log_validation_errors(e: ValidationError):
+    for error in e.errors():
+        field = " -> ".join(str(item) for item in error["loc"])
+        message = error["msg"]
+        logger.error(f"{type(e).__name__}: {message} ({field}) ")
+
+
 @dataclass
 class LoopContext:
     generator: Iterator[int] | None = None
@@ -95,23 +102,20 @@ def update(
     args: LoopContext = context.args
 
     if args.generator is not None:
-        try:
-            while next(args.generator):
-                controls.render()
-        except StopIteration:
-            args.generator = None
-            pass
+        for _ in args.generator:
+            controls.render()
+        args.generator = None
+
     if args.solver is not None:
+        for _ in args.solver:
+            controls.render()
+        args.solver = None
+
         try:
-            while next(args.solver):
-                controls.render()
-        except StopIteration:
-            args.solver = None
-            try:
-                maze.export()
-            except (OSError, UnicodeEncodeError) as e:
-                logger.error(f"export failed: {type(e).__name__}: {e}")
-                sys.exit(3)
+            maze.export()
+        except (OSError, UnicodeEncodeError) as e:
+            logger.error(f"export failed: {type(e).__name__}: {e}")
+            sys.exit(3)
 
     controls.render()
 
@@ -128,31 +132,35 @@ def main(argc: int, argv: list[str]) -> None:
     try:
         maze: Maze = load(argv[1])
     except ValidationError as e:
-        for error in e.errors():
-            field = " -> ".join(str(item) for item in error["loc"])
-            message = error["msg"]
-            logger.error(f"{type(e).__name__}: {message} ({field}) ")
+        log_validation_errors(e)
         sys.exit(2)
     except Exception as e:
         logger.error(f"{type(e).__name__}: {e}")
         sys.exit(2)
 
     random.seed(maze.seed)
-    engine = GraphicalEngine(
-        maze=maze,
-        config=EngineConfig(wall_size=2, cell_size=40),
-        palette=Palette(
-            empty=0x000000FF,
-            wall=0x0000AAFF,
-            unreachable=0xAAAAAAFF,
-            cursor=0x00FF00FF,
-            path=0xFF000055,
-            seek=0x00FF0033,
-            seek_premium=0xFF00FFAA,
-            entry=0xFFFFFFFF,
-            exit=0xFFFFFFFF,
-        ),
-    )
+    try:
+        engine = GraphicalEngine(
+            maze=maze,
+            config=EngineConfig(wall_size=2, cell_size=40),
+            palette=Palette(
+                empty=0x000000FF,
+                wall=0x0000AAFF,
+                unreachable=0xAAAAAAFF,
+                cursor=0x00FF00FF,
+                path=0xFF000055,
+                seek=0x00FF0033,
+                seek_premium=0xFF00FFAA,
+                entry=0xFFFFFFFF,
+                exit=0xFFFFFFFF,
+            ),
+        )
+    except ValidationError as e:
+        log_validation_errors(e)
+        sys.exit(2)
+    except Exception as e:
+        logger.error(f"{type(e).__name__}: {e}")
+        sys.exit(2)
 
     print(
         """
@@ -168,11 +176,18 @@ def main(argc: int, argv: list[str]) -> None:
         flush=True,
     )
 
-    engine.loop(
-        update,
-        keypress=keypress,
-        args=LoopContext(generator=generate(maze), solver=solve(maze)),
-    )
+    try:
+        engine.loop(
+            update,
+            keypress=keypress,
+            args=LoopContext(generator=generate(maze), solver=solve(maze)),
+        )
+    except ValidationError as e:
+        log_validation_errors(e)
+        sys.exit(2)
+    except Exception as e:
+        logger.error(f"{type(e).__name__}: {e}")
+        sys.exit(2)
 
 
 if __name__ == "__main__":

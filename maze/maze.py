@@ -146,7 +146,8 @@ class Maze(BaseModel):
                 random.randint(0, self.width - 1),
                 random.randint(0, self.height - 1),
             )
-            if not self.get_cell(*new_exit)["state"] & CellState.UNREACHABLE:
+            if (not self.get_cell(*new_exit)["state"] & CellState.UNREACHABLE
+                    and new_exit != new_entry):
                 break
         self.exit = new_exit
 
@@ -275,10 +276,12 @@ class Maze(BaseModel):
             h, w = self.height, self.width
             dirs: str = "".join(reversed(self.dirs))
             for y in range(h):
-                f.write("".join(
-                    format(int(self.array[y, x]["walls"]), "X")
-                    for x in range(w)
-                ))
+                f.write(
+                    "".join(
+                        format(int(self.array[y, x]["walls"]), "X")
+                        for x in range(w)
+                    )
+                )
                 f.write("\n")
             f.write("\n")
             f.write(f"{i_x},{i_y}\n")
