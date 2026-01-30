@@ -1,10 +1,10 @@
 import logging
 import logging.config
 import os
+import random
 import sys
 from dataclasses import dataclass
 from typing import Iterator
-import random
 
 from pydantic import ValidationError
 
@@ -12,6 +12,7 @@ from maze import Maze
 from maze.colors import Palette, random_color
 from maze.engine import (
     EngineConfig,
+    EngineContext,
     GraphicalEngine,
     KeyCode,
 )
@@ -50,8 +51,7 @@ LOGGING_CONFIG = {
 
 
 @dataclass
-class Context:
-    frame: int = 0
+class LoopContext:
     generator: Iterator[int] | None = None
     solver: Iterator[int] | None = None
 
@@ -59,17 +59,19 @@ class Context:
 def keypress(
     keycode: int,
     maze: Maze,
-    palette: Palette,
-    context: Context,
     controls: GraphicalEngine.Controls,
+    context: EngineContext,
 ) -> int:
+    args: LoopContext = context.args
+    palette = context.palette
+
     match keycode:
         case KeyCode.G:
             controls.reinitialize()
-            context.generator = generate(maze)
+            args.generator = generate(maze)
         case KeyCode.C:
             controls.clear()
-            context.solver = solve(maze)
+            args.solver = solve(maze)
         case KeyCode.Q:
             controls.stop()
         case KeyCode.R:
@@ -87,26 +89,24 @@ def keypress(
 
 def update(
     maze: Maze,
-    palette: Palette,
-    context: Context,
     controls: GraphicalEngine.Controls,
+    context: EngineContext,
 ) -> None:
-    logger.debug(f"update {context.frame}")
-    context.frame += 1
+    args: LoopContext = context.args
 
-    if context.generator is not None:
+    if args.generator is not None:
         try:
-            while next(context.generator):
+            while next(args.generator):
                 controls.render()
         except StopIteration:
-            context.generator = None
+            args.generator = None
             pass
-    if context.solver is not None:
+    if args.solver is not None:
         try:
-            while next(context.solver):
+            while next(args.solver):
                 controls.render()
         except StopIteration:
-            context.solver = None
+            args.solver = None
             try:
                 maze.export()
             except (OSError, UnicodeEncodeError) as e:
@@ -171,7 +171,7 @@ def main(argc: int, argv: list[str]) -> None:
     engine.loop(
         update,
         keypress=keypress,
-        context=Context(generator=generate(maze), solver=solve(maze))
+        args=LoopContext(generator=generate(maze), solver=solve(maze)),
     )
 
 

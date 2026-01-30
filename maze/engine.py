@@ -12,22 +12,11 @@ from maze.maze import Cell, CellState, CellWall, Maze
 logger: logging.Logger = logging.getLogger(__name__)
 
 KeypressCallback: TypeAlias = Callable[
-    [
-        int,
-        Maze,
-        Palette,
-        Any,
-        "GraphicalEngine.Controls",
-    ],
+    [int, Maze, "GraphicalEngine.Controls", "EngineContext"],
     int,
 ]
 UpdateCallback: TypeAlias = Callable[
-    [
-        Maze,
-        Palette,
-        Any,
-        "GraphicalEngine.Controls",
-    ],
+    [Maze, "GraphicalEngine.Controls", "EngineContext"],
     None,
 ]
 
@@ -46,6 +35,11 @@ class KeyCode(IntEnum):
 class EngineConfig(BaseModel):
     cell_size: int = Field(frozen=True)
     wall_size: int = Field(frozen=True)
+
+
+class EngineContext(BaseModel):
+    args: Any
+    palette: Palette
 
 
 class GraphicalEngine:
@@ -121,27 +115,32 @@ class GraphicalEngine:
 
     @staticmethod
     def _update(
-        args: tuple["GraphicalEngine", tuple[UpdateCallback, Any]],
+        args: tuple["GraphicalEngine", tuple[UpdateCallback, EngineContext]],
     ) -> None:
         self, (callback, context) = args
-        callback(self._maze, self._palette, context, self.controls)
+        callback(self._maze, self.controls, context)
 
         if self._palette.flush():
             self._compute_tiles()
 
     @staticmethod
-    def _keypress(keycode: int, args: tuple["GraphicalEngine", Any]) -> int:
+    def _keypress(
+        keycode: int,
+        args: tuple["GraphicalEngine", tuple[KeypressCallback, EngineContext]],
+    ) -> int:
         self, (callback, context) = args
-        return callback(
-            keycode, self._maze, self._palette, context, self.controls
-        )
+        return callback(keycode, self._maze, self.controls, context)
 
     def loop(
         self,
         callback: UpdateCallback,
         keypress: KeypressCallback | None = None,
-        context: Any = None,
+        args: Any = None,
     ) -> None:
+        context: EngineContext = EngineContext(
+            args=args,
+            palette=self._palette,
+        )
         if keypress is not None:
             self._mlx.mlx_key_hook(
                 self._window,
