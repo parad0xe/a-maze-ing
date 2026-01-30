@@ -2,7 +2,7 @@
 DIRS := . maze
 MAIN := a_maze_ing.py
 ARGS ?= config.txt
-VENV ?= venv
+VENV := .venv
 
 PYCACHES = $(addsuffix /__pycache__,$(DIRS))
 MYPYCACHES = $(addsuffix /.mypy_cache,$(DIRS))
@@ -13,7 +13,7 @@ PYTHON := $(VENV)/bin/python3
 FLAKE8 := $(PYTHON) -m flake8
 MYPY := $(PYTHON) -m mypy
 PIP := $(PYTHON) -m pip
-POETRY := POETRY_VIRTUALENVS_CREATE=false $(PYTHON) -m poetry
+POETRY := POETRY_VIRTUALENVS_IN_PROJECT=true $(PYTHON) -m poetry
 
 # user rules
 install: pyproject.toml $(PYTHON)
@@ -39,6 +39,7 @@ clean:
 
 clean-venv:
 	rm -rf $(VENV)
+	rm -f poetry.lock
 
 # build rule
 $(PYTHON):
