@@ -31,6 +31,11 @@ class Palette(BaseModel):
         self._is_dirty = False
         return is_dirty
 
+    def randomize(self) -> None:
+        for key in vars(self):
+            if key != "empty":
+                self.__setattr__(key, random_color())
+
 
 class Rgba(BaseModel):
     r: int

@@ -9,7 +9,7 @@ from typing import Iterator
 from pydantic import ValidationError
 
 from maze import Maze
-from maze.colors import Palette, random_color
+from maze.colors import Palette
 from maze.engine import (
     EngineConfig,
     EngineContext,
@@ -82,9 +82,8 @@ def keypress(
         case KeyCode.Q:
             controls.stop()
         case KeyCode.R:
-            for key in vars(palette):
-                if key != "empty":
-                    setattr(palette, key, random_color())
+            palette.randomize()
+            controls.render()
         case KeyCode.N:
             controls.clear()
             maze.random_entry_exit()
@@ -116,8 +115,6 @@ def update(
         except (OSError, UnicodeEncodeError) as e:
             logger.error(f"export failed: {type(e).__name__}: {e}")
             sys.exit(3)
-
-    controls.render()
 
 
 def main(argc: int, argv: list[str]) -> None:
