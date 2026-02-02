@@ -81,10 +81,10 @@ def keypress(
             controls.stop()
         case KeyCode.R:
             palette.randomize()
-            controls.render()
         case KeyCode.N:
             controls.clear()
             maze.random_entry_exit()
+            controls.render()
         case KeyCode.S:
             controls.toggle_path()
 

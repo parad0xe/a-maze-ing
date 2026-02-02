@@ -122,6 +122,7 @@ class GraphicalEngine:
 
         if self._palette.flush():
             self._compute_tiles()
+            self.controls.render()
 
     @staticmethod
     def _keypress(
