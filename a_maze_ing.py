@@ -16,9 +16,7 @@ from maze.engine import (
     GraphicalEngine,
     KeyCode,
 )
-from maze.generator import generate
 from maze.loader import load
-from maze.solving import solve
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -75,10 +73,10 @@ def keypress(
     match keycode:
         case KeyCode.G:
             controls.reinitialize()
-            args.generator = generate(maze)
+            args.generator = maze.generate()
         case KeyCode.C:
             controls.clear()
-            args.solver = solve(maze)
+            args.solver = maze.solve()
         case KeyCode.Q:
             controls.stop()
         case KeyCode.R:
@@ -177,7 +175,7 @@ def main(argc: int, argv: list[str]) -> None:
         engine.loop(
             update,
             keypress=keypress,
-            args=LoopContext(generator=generate(maze), solver=solve(maze)),
+            args=LoopContext(generator=maze.generate(), solver=maze.solve()),
         )
     except ValidationError as e:
         log_validation_errors(e)

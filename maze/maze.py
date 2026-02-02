@@ -1,7 +1,7 @@
 import logging
 import random
 from enum import IntEnum
-from typing import Annotated, Any, TypeAlias
+from typing import Annotated, Any, TypeAlias, Iterator
 
 import numpy as np
 import numpy.typing as npt
@@ -287,3 +287,135 @@ class Maze(BaseModel):
             f.write(f"{i_x},{i_y}\n")
             f.write(f"{e_x},{e_y}\n")
             f.write(f"{dirs}")
+
+    def solve(self) -> Iterator[int]:
+
+        def cell_data(x: int, y: int, step: int, parent):
+            dist = abs(x - e_x) + abs(y - e_y)
+            return {
+                "x": x, "y": y,
+                "cell": brd[y][x],
+                "step": step,
+                "dist": dist,
+                "score": step + dist,
+                "parent": parent,
+            }
+
+        brd: MazeArray = self.array
+        e_x, e_y = self.exit
+        i_x, i_y = self.entry
+
+        processing: list = []
+        processed: set[tuple[int, int]] = set()
+        path: dict[tuple[int, int], int] = {(i_x, i_y): 0}
+        processing.append(cell_data(i_x, i_y, 0, None))
+
+        while processing:
+            cur = processing.pop(min(range(
+                len(processing)), key=lambda i: processing[i]["score"])
+            )
+            c_x: int = cur["x"]
+            c_y: int = cur["y"]
+            if not self.get_cell(
+                    c_x,
+                    c_y,
+            )["state"] & (CellState.ENTRY | CellState.EXIT):
+                self.set_state(c_x, c_y, CellState.SEEK)
+            yield 1
+            if cur["step"] != path.get((c_x, c_y), cur["step"]):
+                continue
+            processed.add((c_x, c_y))
+            if c_x == e_x and c_y == e_y:
+                break
+
+            for flag, (d_x, d_y) in WallDescriptor.walls:
+                n_x = c_x + d_x
+                n_y = c_y + d_y
+                if (not cur["cell"]["walls"] & flag and
+                        not self.is_out_of_bounds(n_x, n_y) and
+                    (n_x, n_y) not in processed and
+                    ((n_x, n_y) not in path or
+                     cur["step"] + 1 < path[(n_x, n_y)])):
+                    path[n_x, n_y] = cur["step"] + 1
+                    if not self.get_cell(
+                            n_x,
+                            n_y,
+                    )["state"] & (CellState.ENTRY | CellState.EXIT):
+                        self.set_state(n_x, n_y, CellState.SEEK_PREMIUM)
+                    yield 1
+                    processing.append(
+                        cell_data(n_x, n_y, cur["step"] + 1, cur)
+                    )
+
+        self.unset(state=(CellState.SEEK | CellState.SEEK_PREMIUM))
+        yield 1
+
+        self.dirs.clear()
+        while cur is not None:
+            parent = cur["parent"]
+            if parent is not None:
+                dx = cur["x"] - parent["x"]
+                dy = cur["y"] - parent["y"]
+
+                if dx == 1 and dy == 0:
+                    self.dirs.append("E")
+                elif dx == -1 and dy == 0:
+                    self.dirs.append("W")
+                elif dx == 0 and dy == 1:
+                    self.dirs.append("S")
+                elif dx == 0 and dy == -1:
+                    self.dirs.append("N")
+
+            if not self.get_cell(
+                cur["x"], cur["y"]
+            )["state"] & (CellState.ENTRY | CellState.EXIT):
+                self.set_state(cur["x"], cur["y"], CellState.PATH)
+            cur = parent
+            yield 1
+
+    def generate(self) -> Iterator[int]:
+        viewed: list[tuple[int, int]] = []
+        path: list[tuple[int, int]] = [(0, 0)]
+        turn: int = 0
+        last_by_prob: bool = False
+
+        if self.perfect:
+            viewed.append((0, 0))
+
+        while True:
+            turn += 1
+            if len(path) == 0:
+                break
+            cx, cy = path[-1]
+            self.set_state(cx, cy, CellState.CURSOR)
+            yield 1
+            added = False
+            random_walls = WallDescriptor.walls.copy()
+            random.shuffle(random_walls)
+            prob: float = random.random()
+            prob_ok: bool = False
+            for wall, (dx, dy) in random_walls:
+                nx = cx + dx
+                ny = cy + dy
+                if not self.is_out_of_bounds(nx, ny):
+                    next_cell = self.get_cell(nx, ny)
+                    if (not self.perfect and turn % 10 == 0 and prob < 0.5 and
+                            not last_by_prob):
+                        prob_ok = True
+                    else:
+                        last_by_prob = False
+                    if next_cell["state"] != CellState.UNREACHABLE and (
+                            prob_ok or (nx, ny) not in viewed):
+                        if (nx, ny) in viewed:
+                            last_by_prob = True
+                        self.unset_walls(cx, cy, wall)
+                        viewed.append((nx, ny))
+                        path.append((nx, ny))
+                        added = True
+                        break
+            self.set_state(cx, cy, CellState.EMPTY)
+            if not added:
+                path.pop(-1)
+        self.set_state(*self.entry, CellState.ENTRY)
+        self.set_state(*self.exit, CellState.EXIT)
+        yield 1
