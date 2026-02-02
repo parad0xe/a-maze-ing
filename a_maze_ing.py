@@ -9,14 +9,14 @@ from typing import Iterator
 from pydantic import ValidationError
 
 from mazegen import Maze
-from srcs.colors import Palette
-from srcs.engine import (
+from colors import Palette
+from engine import (
     EngineConfig,
     EngineContext,
     GraphicalEngine,
     KeyCode,
 )
-from srcs.loader import load
+from loader import load
 
 logger: logging.Logger = logging.getLogger(__name__)
 

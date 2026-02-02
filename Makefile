@@ -17,7 +17,7 @@ MYPYCACHES = $(addsuffix /.mypy_cache,$(DIRS))
 EXCLUDE = --exclude $(VENV)
 
 # tools
-PYTHON := $(VENV)/bin/python3
+PYTHON := PYTHONPATH=srcs $(VENV)/bin/python3
 FLAKE8 := $(PYTHON) -m flake8 $(EXCLUDE)
 MYPY := $(PYTHON) -m mypy $(EXCLUDE)
 PIP := $(PYTHON) -m pip
