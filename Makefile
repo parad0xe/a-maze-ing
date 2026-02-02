@@ -30,7 +30,6 @@ clean:
 	rm -rf $(PYCACHES) $(MYPYCACHES)
 	rm -rf $(VENV)
 	rm -f poetry.lock
-	find . -maxdepth 1 -type f -name '*.txt' ! -name 'config.txt' -delete
 	rm -rf $(WHEEL_DIR)
 
 debug: install
