@@ -3,6 +3,7 @@ DIRS := . srcs mazegen
 MAIN := a_maze_ing.py
 ARGS ?= config.txt
 VENV := .venv
+WHEEL_DIR := dist
 
 PYCACHES = $(addsuffix /__pycache__,$(DIRS))
 MYPYCACHES = $(addsuffix /.mypy_cache,$(DIRS))
@@ -30,7 +31,7 @@ clean:
 	rm -rf $(VENV)
 	rm -f poetry.lock
 	find . -maxdepth 1 -type f -name '*.txt' ! -name 'config.txt' -delete
-	rm -rf dist
+	rm -rf $(WHEEL_DIR)
 
 debug: install
 	$(PYTHON) -m pdb $(MAIN) $(ARGS)
