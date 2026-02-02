@@ -2,7 +2,7 @@
 import logging
 import random
 from enum import IntEnum
-from typing import Annotated, Any, TypeAlias, Iterator
+from typing import Annotated, Any, TypeAlias, Iterator, cast
 
 # extern modules
 import numpy as np
@@ -103,7 +103,7 @@ class Maze(BaseModel):
 
         logger.debug("Maze model intialized")
 
-    def __setattr__(self, name, value: Any):
+    def __setattr__(self, name: str, value: Any) -> None:
         if not name.startswith("_"):
             if name == "entry":
                 x, y = value
@@ -125,7 +125,7 @@ class Maze(BaseModel):
 
     @field_validator("entry", "exit", mode="before")
     @classmethod
-    def _parse_coordinates(cls, v: Any) -> tuple[int, int]:
+    def _parse_coordinates(cls, v: Any) -> tuple[int, int] | Any:
         if isinstance(v, str):
             logger.debug("Parse string entry/exit coordinates")
             coords: list[int] = [int(p.strip()) for p in v.split(",")]
@@ -181,7 +181,7 @@ class Maze(BaseModel):
     def get_cell(self, x: int, y: int) -> Cell:
         if self.is_out_of_bounds(x, y):
             raise ValueError(f"out of bound ({x}, {y})")
-        return self.array[y][x]
+        return cast(Cell, self.array[y][x])
 
     def mask(self, walls: int | None = None, state: int | None = None) -> None:
         if walls is not None:
@@ -293,7 +293,9 @@ class Maze(BaseModel):
     # solve
     def solve(self) -> Iterator[int]:
 
-        def cell_data(x: int, y: int, step: int, parent):
+        def cell_data(
+                x: int, y: int, step: int, parent: dict[str, Any] | None
+        ) -> dict[str, Any]:
             dist = abs(x - e_x) + abs(y - e_y)
             return {
                 "x": x, "y": y,

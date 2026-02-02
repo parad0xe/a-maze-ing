@@ -48,7 +48,7 @@ LOGGING_CONFIG = {
 }
 
 
-def log_validation_errors(e: ValidationError):
+def log_validation_errors(e: ValidationError) -> None:
     for error in e.errors():
         field = " -> ".join(str(item) for item in error["loc"])
         message = error["msg"]
