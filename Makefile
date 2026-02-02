@@ -17,18 +17,20 @@ MYPYCACHES = $(addsuffix /.mypy_cache,$(DIRS))
 EXCLUDE = --exclude $(VENV)
 
 # tools
-PYTHON := PYTHONPATH=srcs $(VENV)/bin/python3
+PYTHON := $(VENV)/bin/python3
 FLAKE8 := $(PYTHON) -m flake8 $(EXCLUDE)
 MYPY := $(PYTHON) -m mypy $(EXCLUDE)
 PIP := $(PYTHON) -m pip
 POETRY := POETRY_VIRTUALENVS_IN_PROJECT=true $(PYTHON) -m poetry
 
+PYTHONPATH := srcs
 
 # rules
 install: pyproject.toml $(WHEEL) | $(PYTHON)
 	$(POETRY) install --no-root
 
 run: install
+	PYTHONPATH=$(PYTHONPATH) 
 	@$(PYTHON) $(MAIN) $(ARGS)
 
 wheel: $(WHEEL)
@@ -40,14 +42,17 @@ clean:
 	rm -rf $(WHEEL_DEST_DIR)
 
 debug: install
+	PYTHONPATH=$(PYTHONPATH) 
 	$(PYTHON) -m pdb $(MAIN) $(ARGS)
 
 lint: install
+	PYTHONPATH=$(PYTHONPATH) 
 	@$(FLAKE8)
 	@$(MYPY) . --warn-return-any --warn-unused-ignores --check-untyped-defs \
 		--ignore-missing-imports --disallow-untyped-defs 
 
 lint-strict: install
+	PYTHONPATH=$(PYTHONPATH)
 	@$(FLAKE8)
 	@$(MYPY) . --strict
 
