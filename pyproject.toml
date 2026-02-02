@@ -7,8 +7,6 @@ packages = [{ include = "mazegen" }]
 python = ">=3.10"
 pydantic = "2.12.5"
 numpy = "2.2.6"
-
-[tool.poetry.group.a-maze-ing.dependencies]
 mlx = { path = "libs/mlx-2.2-py3-none-any.whl" }
 mypy = "1.19.1"
 flake8 = "7.3.0"

@@ -15,15 +15,22 @@ MYPY := $(PYTHON) -m mypy $(EXCLUDE)
 PIP := $(PYTHON) -m pip
 POETRY := POETRY_VIRTUALENVS_IN_PROJECT=true $(PYTHON) -m poetry
 
-# user rules
+# rules
 install: pyproject.toml wheel $(PYTHON)
-	$(POETRY) install --with a-maze-ing
+	$(POETRY) install
 
 wheel: $(PYTHON)
 	$(POETRY) build -f wheel
 
 run: install
 	$(PYTHON) $(MAIN) $(ARGS)
+
+clean:
+	rm -rf $(PYCACHES) $(MYPYCACHES)
+	rm -rf $(VENV)
+	rm -f poetry.lock
+	find . -maxdepth 1 -type f -name '*.txt' ! -name 'config.txt' -delete
+	rm -rf dist
 
 debug: install
 	$(PYTHON) -m pdb $(MAIN) $(ARGS)
@@ -37,20 +44,6 @@ lint-strict: install
 	$(FLAKE8)
 	$(MYPY) . --strict
 
-clean:
-	rm -rf $(PYCACHES) $(MYPYCACHES)
-
-clean-venv:
-	rm -rf $(VENV)
-	rm -f poetry.lock
-
-clean-wheel:
-	rm -rf dist
-
-clean-all: clean clean-venv clean-wheel
-	find . -maxdepth 1 -type f -name '*.txt' ! -name 'config.txt' -delete
-
-# build rule
 $(PYTHON):
 	python3 -m venv $(VENV)
 	$(PIP) install -U pip
