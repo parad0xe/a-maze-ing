@@ -16,9 +16,11 @@ PIP := $(PYTHON) -m pip
 POETRY := POETRY_VIRTUALENVS_IN_PROJECT=true $(PYTHON) -m poetry
 
 # user rules
-install: pyproject.toml $(PYTHON)
+install: pyproject.toml wheel $(PYTHON)
+	$(POETRY) install --with a-maze-ing
+
+wheel: $(PYTHON)
 	$(POETRY) build -f wheel
-	$(POETRY) install
 
 run: install
 	$(PYTHON) $(MAIN) $(ARGS)
@@ -46,6 +48,7 @@ clean-wheel:
 	rm -rf dist
 
 clean-all: clean clean-venv clean-wheel
+	find . -maxdepth 1 -type f -name '*.txt' ! -name 'config.txt' -delete
 
 # build rule
 $(PYTHON):
