@@ -3,6 +3,7 @@ from enum import IntEnum
 from typing import Any, Callable, TypeAlias
 
 import numpy as np
+import numpy.typing as npt
 from mlx import Mlx
 from pydantic import BaseModel, Field
 
@@ -21,6 +22,12 @@ UpdateCallback: TypeAlias = Callable[
 ]
 
 PIXEL_DT = np.dtype("u1, u1, u1, u1")
+
+# typing helpers
+TileKey: TypeAlias = tuple[int, int]
+Pixel: TypeAlias = np.void
+Tile: TypeAlias = npt.NDArray[Pixel]
+Tiles: TypeAlias = dict[TileKey, Tile]
 
 
 class KeyCode(IntEnum):
@@ -57,17 +64,17 @@ class GraphicalEngine:
         self._palette: Palette = palette
         self._mlx: Mlx = Mlx()
         self._mlx_ptr: Any = self._mlx.mlx_init()
-        self._window = self._mlx.mlx_new_window(
+        self._window: Any = self._mlx.mlx_new_window(
             self._mlx_ptr, self._width, self._height, "A-Maze-ing"
         )
-        self._image = self._mlx.mlx_new_image(
+        self._image: Any = self._mlx.mlx_new_image(
             self._mlx_ptr, self._width, self._height
         )
         data: tuple[Any, ...] = self._mlx.mlx_get_data_addr(self._image)
         self._image_bytes: Any = data[0]
         self._bpp: int = data[1] // 8
         self._ppr: int = data[2]
-        self._tiles: dict = {}
+        self._tiles: Tiles = {}
         self._show_path: bool = True
 
         self._compute_tiles()
@@ -81,10 +88,11 @@ class GraphicalEngine:
         cell_size: int = self._config.cell_size
 
         wall_bytes: bytes = Rgba.bytes_from_int(self._palette.wall)
-        wall_pixel = np.frombuffer(wall_bytes, dtype=PIXEL_DT)[0]
+        wall_pixel: Pixel = np.frombuffer(wall_bytes, dtype=PIXEL_DT)[0]
 
         dump: dict[str, Any] = self._palette.model_dump()
-        pixels: dict = {}
+        pixels: dict[int, Pixel] = {}
+
         for state in CellState:
             value = dump.get(state.name.lower(), None)
             if value is None:
@@ -92,13 +100,15 @@ class GraphicalEngine:
                     f"color {state.name.lower()} not defined in the palette"
                 )
                 continue
-            pixel_bytes = Rgba.bytes_from_int(value)
+            pixel_bytes: bytes = Rgba.bytes_from_int(value)
             pixels[state.value] = np.frombuffer(pixel_bytes, dtype=PIXEL_DT)[0]
 
-        tiles: dict = {}
-        for state, pixel in pixels.items():
+        tiles: Tiles = {}
+        for state_value, pixel in pixels.items():
             for walls in range(16):
-                tile = np.full((cell_size, cell_size), pixel, dtype=PIXEL_DT)
+                tile: Tile = np.full((
+                    cell_size, cell_size), pixel, dtype=PIXEL_DT
+                )
 
                 if walls & CellWall.NORTH:
                     tile[:wall_size, :] = wall_pixel
@@ -109,7 +119,7 @@ class GraphicalEngine:
                 if walls & CellWall.WEST:
                     tile[:, :wall_size] = wall_pixel
 
-                tiles[(walls, state)] = tile
+                tiles[(walls, state_value)] = tile
 
         self._tiles = tiles
 
@@ -186,9 +196,9 @@ class GraphicalEngine:
                 self._engine._mlx_ptr, self._engine._window
             )
 
-            cell_size = self._engine._config.cell_size
+            cell_size: int = self._engine._config.cell_size
 
-            view_2d = np.frombuffer(
+            view_2d: npt.NDArray[Pixel] = np.frombuffer(
                 self._engine._image_bytes, dtype=PIXEL_DT
             ).reshape((self._engine._height, self._engine._width))
 
@@ -199,8 +209,8 @@ class GraphicalEngine:
                     x0 = cx * cell_size
                     cell: Cell = self._engine._maze.get_cell(cx, cy)
 
-                    walls = cell["walls"].item()
-                    state = cell["state"].item()
+                    walls: int = cell["walls"].item()
+                    state: int = cell["state"].item()
 
                     if not self._engine._show_path and state & (
                             CellState.PATH | CellState.SEEK |

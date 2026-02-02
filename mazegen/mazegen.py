@@ -310,7 +310,7 @@ class Maze(BaseModel):
         e_x, e_y = self.exit
         i_x, i_y = self.entry
 
-        processing: list = []
+        processing: list[dict[str, Any]] = []
         processed: set[tuple[int, int]] = set()
         path: dict[tuple[int, int], int] = {(i_x, i_y): 0}
         processing.append(cell_data(i_x, i_y, 0, None))

@@ -1,4 +1,5 @@
 import mazegen
+from typing import Any
 
 
 class ParseError(Exception):
@@ -21,7 +22,7 @@ def load(input_file: str) -> mazegen.Maze:
         OSError: [TODO:description]
         ValidationError: [TODO:description]
     """
-    values: dict = {}
+    values: dict[str, Any] = {}
     with open(input_file, "r", encoding="utf-8") as f:
         for line in f:
             if line.strip().startswith("#"):
