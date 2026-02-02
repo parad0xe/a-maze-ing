@@ -191,11 +191,7 @@ class Maze(BaseModel):
             _, state = self._demux(state)
             self.array["state"] &= state
 
-    def set(
-        self,
-        walls: int | None = None,
-        state: int | None = None,
-    ) -> None:
+    def set(self, walls: int | None = None, state: int | None = None) -> None:
         if state is not None:
             _, state = self._demux(state)
             self.array["state"] = state
