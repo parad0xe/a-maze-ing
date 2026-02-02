@@ -1,5 +1,5 @@
 # files
-DIRS := . maze
+DIRS := . srcs
 MAIN := a_maze_ing.py
 ARGS ?= config.txt
 VENV := .venv
