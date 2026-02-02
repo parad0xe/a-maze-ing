@@ -30,8 +30,7 @@ install: pyproject.toml $(WHEEL) | $(PYTHON)
 	$(POETRY) install --no-root
 
 run: install
-	PYTHONPATH=$(PYTHONPATH) 
-	@$(PYTHON) $(MAIN) $(ARGS)
+	@PYTHONPATH=$(PYTHONPATH) $(PYTHON) $(MAIN) $(ARGS)
 
 wheel: $(WHEEL)
 
@@ -42,19 +41,17 @@ clean:
 	rm -rf $(WHEEL_DEST_DIR)
 
 debug: install
-	PYTHONPATH=$(PYTHONPATH) 
-	$(PYTHON) -m pdb $(MAIN) $(ARGS)
+	@PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m pdb $(MAIN) $(ARGS)
 
 lint: install
-	PYTHONPATH=$(PYTHONPATH) 
-	@$(FLAKE8)
-	@$(MYPY) . --warn-return-any --warn-unused-ignores --check-untyped-defs \
-		--ignore-missing-imports --disallow-untyped-defs 
+	@PYTHONPATH=$(PYTHONPATH) $(FLAKE8)
+	@PYTHONPATH=$(PYTHONPATH) $(MYPY) . --check-untyped-defs \
+	--warn-unused-ignores --ignore-missing-imports \
+	--warn-return-any --disallow-untyped-defs
 
 lint-strict: install
-	PYTHONPATH=$(PYTHONPATH)
-	@$(FLAKE8)
-	@$(MYPY) . --strict
+	@PYTHONPATH=$(PYTHONPATH) $(FLAKE8)
+	@PYTHONPATH=$(PYTHONPATH) $(MYPY) . --strict
 
 $(PYTHON):
 	@python3 -m venv $(VENV)
