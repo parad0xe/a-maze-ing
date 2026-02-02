@@ -15,7 +15,7 @@ class Palette(BaseModel):
     wall: int
     empty: int
 
-    _is_dirty = True
+    _is_dirty: bool = True
 
     def __setattr__(self, name: str, value: Any) -> None:
         super().__setattr__(name, value)
@@ -32,9 +32,9 @@ class Palette(BaseModel):
         return is_dirty
 
     def randomize(self) -> None:
-        for key in vars(self):
+        for key in self.model_fields:
             if key != "empty":
-                self.__setattr__(key, random_color())
+                setattr(self, key, random_color())
 
 
 class Rgba(BaseModel):
