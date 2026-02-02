@@ -1,8 +1,10 @@
+# standard modules
 import logging
 import random
 from enum import IntEnum
 from typing import Annotated, Any, TypeAlias, Iterator
 
+# extern modules
 import numpy as np
 import numpy.typing as npt
 from pydantic import (
@@ -13,12 +15,19 @@ from pydantic import (
     field_validator,
 )
 
+# logger config
+logger: logging.Logger = logging.getLogger(__name__)
+
+# defines
 MIN_EDGE_SIZE: int = 1
 MAX_EDGE_SIZE: int = 500
 
-logger: logging.Logger = logging.getLogger(__name__)
+MAZE_ARRAY_DT = np.dtype([("walls", np.int16), ("state", np.int16)])
+MazeArray: TypeAlias = npt.NDArray[np.void]
+Cell: TypeAlias = np.void
 
 
+# enums
 class CellWall(IntEnum):
     NORTH = 1
     EAST = 1 << 1
@@ -53,11 +62,7 @@ class WallDescriptor:
     }
 
 
-MAZE_ARRAY_DT = np.dtype([("walls", np.int16), ("state", np.int16)])
-MazeArray: TypeAlias = npt.NDArray[np.void]
-Cell: TypeAlias = np.void
-
-
+# main class
 class Maze(BaseModel):
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
 
@@ -66,9 +71,10 @@ class Maze(BaseModel):
     entry: tuple[int, int]
     exit: tuple[int, int]
     perfect: bool
-    output_file: str = Field(min_length=1)
-    dirs: list[str] = Field(default_factory=list)
+    shortest_path: list[str] = Field(default_factory=list)
     seed: int | None = None
+
+    output_file: str = Field(min_length=1)
 
     array: Annotated[MazeArray, SkipValidation] = Field(
         default_factory=lambda: np.zeros((0, 0), dtype=MAZE_ARRAY_DT)
@@ -130,7 +136,7 @@ class Maze(BaseModel):
 
     def initialize(self) -> None:
         self.set(walls=0xF, state=0x0)
-        self.display_life_answer()
+        self.display_42()
 
     def random_entry_exit(self) -> None:
         while True:
@@ -151,7 +157,7 @@ class Maze(BaseModel):
                 break
         self.exit = new_exit
 
-    def display_life_answer(self) -> None:
+    def display_42(self) -> None:
         # fmt: off
         answer = np.array([
             [1, 0, 0, 0, 1, 1, 1],
@@ -274,7 +280,7 @@ class Maze(BaseModel):
         with open(self.output_file, "w", encoding="utf-8") as f:
             i_x, i_y, e_x, e_y = (*self.entry, *self.exit)
             h, w = self.height, self.width
-            dirs: str = "".join(reversed(self.dirs))
+            shortest_path: str = "".join(reversed(self.shortest_path))
             for y in range(h):
                 f.write(
                     "".join(
@@ -286,8 +292,9 @@ class Maze(BaseModel):
             f.write("\n")
             f.write(f"{i_x},{i_y}\n")
             f.write(f"{e_x},{e_y}\n")
-            f.write(f"{dirs}")
+            f.write(f"{shortest_path}")
 
+    # solve
     def solve(self) -> Iterator[int]:
 
         def cell_data(x: int, y: int, step: int, parent):
@@ -350,7 +357,7 @@ class Maze(BaseModel):
         self.unset(state=(CellState.SEEK | CellState.SEEK_PREMIUM))
         yield 1
 
-        self.dirs.clear()
+        self.shortest_path.clear()
         while cur is not None:
             parent = cur["parent"]
             if parent is not None:
@@ -358,13 +365,13 @@ class Maze(BaseModel):
                 dy = cur["y"] - parent["y"]
 
                 if dx == 1 and dy == 0:
-                    self.dirs.append("E")
+                    self.shortest_path.append("E")
                 elif dx == -1 and dy == 0:
-                    self.dirs.append("W")
+                    self.shortest_path.append("W")
                 elif dx == 0 and dy == 1:
-                    self.dirs.append("S")
+                    self.shortest_path.append("S")
                 elif dx == 0 and dy == -1:
-                    self.dirs.append("N")
+                    self.shortest_path.append("N")
 
             if not self.get_cell(
                 cur["x"], cur["y"]
@@ -373,6 +380,11 @@ class Maze(BaseModel):
             cur = parent
             yield 1
 
+    def solve_maze(self) -> None:
+        for _ in self.solve():
+            pass
+
+    # generation
     def generate(self) -> Iterator[int]:
         viewed: list[tuple[int, int]] = []
         path: list[tuple[int, int]] = [(0, 0)]
@@ -419,3 +431,7 @@ class Maze(BaseModel):
         self.set_state(*self.entry, CellState.ENTRY)
         self.set_state(*self.exit, CellState.EXIT)
         yield 1
+
+    def generate_maze(self) -> None:
+        for _ in self.generate():
+            pass

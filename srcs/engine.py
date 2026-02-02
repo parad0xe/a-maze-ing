@@ -6,8 +6,8 @@ import numpy as np
 from mlx import Mlx
 from pydantic import BaseModel, Field
 
-from maze.colors import Palette, Rgba
-from maze.maze import Cell, CellState, CellWall, Maze
+from srcs.colors import Palette, Rgba
+from mazegen import Cell, CellState, CellWall, Maze
 
 logger: logging.Logger = logging.getLogger(__name__)
 

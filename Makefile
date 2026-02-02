@@ -9,7 +9,6 @@ MYPYCACHES = $(addsuffix /.mypy_cache,$(DIRS))
 EXCLUDE = --exclude $(VENV)
 
 # tools
-MAKEFLAGS += -j $$(nproc)
 PYTHON := $(VENV)/bin/python3
 FLAKE8 := $(PYTHON) -m flake8 $(EXCLUDE)
 MYPY := $(PYTHON) -m mypy $(EXCLUDE)
@@ -18,6 +17,7 @@ POETRY := POETRY_VIRTUALENVS_IN_PROJECT=true $(PYTHON) -m poetry
 
 # user rules
 install: pyproject.toml $(PYTHON)
+	$(POETRY) build -f wheel
 	$(POETRY) install
 
 run: install
@@ -41,6 +41,11 @@ clean:
 clean-venv:
 	rm -rf $(VENV)
 	rm -f poetry.lock
+
+clean-wheel:
+	rm -rf dist
+
+clean-all: clean clean-venv clean-wheel
 
 # build rule
 $(PYTHON):

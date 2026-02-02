@@ -8,15 +8,15 @@ from typing import Iterator
 
 from pydantic import ValidationError
 
-from maze import Maze
-from maze.colors import Palette
-from maze.engine import (
+from mazegen import Maze
+from srcs.colors import Palette
+from srcs.engine import (
     EngineConfig,
     EngineContext,
     GraphicalEngine,
     KeyCode,
 )
-from maze.loader import load
+from srcs.loader import load
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -158,16 +158,14 @@ def main(argc: int, argv: list[str]) -> None:
         sys.exit(2)
 
     print(
-        """
-            === A-Maze-Ing ===
-            [g] Re-generate a new maze
-            [c] Compute path from entry to exit
-            [s] Show/Hide path from entry to exit
-            [r] Rotate maze colors
-            [n] New random entry and exit points
-            [q] Quit
-            Choice ? [g/c/s/r/n/q]:
-            """,
+        "=== A-Maze-Ing ===",
+        "[g] Re-generate a new maze",
+        "[c] Compute path from entry to exit",
+        "[s] Show/Hide path from entry to exit",
+        "[r] Rotate maze colors",
+        "[n] New random entry and exit points",
+        "[q] Quit",
+        sep="\n",
         flush=True,
     )
 

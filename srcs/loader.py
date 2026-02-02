@@ -1,11 +1,11 @@
-from .maze import Maze
+import mazegen
 
 
 class ParseError(Exception):
     pass
 
 
-def load(input_file: str) -> Maze:
+def load(input_file: str) -> mazegen.Maze:
     """
     [TODO:description]
 
@@ -36,4 +36,4 @@ def load(input_file: str) -> Maze:
             if not value:
                 raise ParseError("Value cannot be empty")
             values[key] = value
-    return Maze(**values)
+    return mazegen.Maze(**values)
