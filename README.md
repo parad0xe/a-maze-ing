@@ -84,11 +84,11 @@ The links down below helped us in **_understanding_** how works maze generation,
 **_inspiration_** before starting. IA helped on **_debugging_**.
 
 [Chatgpt](https://chatgpt.com)  
-[Gemini](https://gemini.google.com/)
-[Youtube : mattbatwings](https://www.youtube.com/watch?v=uctN47p_KVk)
-[Wikipedia : Maze generation algorithm](https://en.wikipedia.org/wiki/Maze_generation_algorithm)
-[Mazegenerator](https://www.mazegenerator.net/)
-[Pathfinding](https://qiao.github.io/PathFinding.js/visual/)
+[Gemini](https://gemini.google.com/)  
+[Youtube : mattbatwings](https://www.youtube.com/watch?v=uctN47p_KVk)  
+[Wikipedia : Maze generation algorithm](https://en.wikipedia.org/wiki/Maze_generation_algorithm)  
+[Mazegenerator](https://www.mazegenerator.net/)  
+[Pathfinding](https://qiao.github.io/PathFinding.js/visual/)  
 
 ### MANAGEMENT
 
@@ -115,3 +115,4 @@ the work througout the project.
   * Maze solving
   * Makefile and install
   * README
+
