@@ -69,7 +69,7 @@ def keypress(
     context: EngineContext,
 ) -> int:
     """
-    This handles keyboard input and triggers generation, solving, or UI actions.
+    This handles input and triggers generation, solving, or UI actions.
 
     Args:
         keycode: Pressed key code from the engine.
@@ -110,7 +110,7 @@ def update(
     context: EngineContext,
 ) -> None:
     """
-    This advances active iterators and renders frames, then exports after solving.
+    This advances iterators and renders frames, then exports after solving.
 
     Args:
         maze: Maze instance being generated or solved.
