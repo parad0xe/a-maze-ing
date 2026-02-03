@@ -76,6 +76,11 @@ SEED=42
 As you can see, lines starting by *__#__* are ignored by the parser.
 
 ### ALGORITHMS
+
+For the solving, we implemented an A* algorithm. We chose this one because it is popular and
+used in videogames. Having heard many times about this one gave the curiosity to understand it
+and to know how to code it.
+
 *The maze generation algorithm you chose*
 *Why you chose this algorithm*
 
@@ -83,12 +88,13 @@ As you can see, lines starting by *__#__* are ignored by the parser.
 The links down below helped us in **_understanding_** how works maze generation, and getting
 **_inspiration_** before starting. IA helped on **_debugging_**.
 
-[Chatgpt](https://chatgpt.com)  
-[Gemini](https://gemini.google.com/)  
+[Pathfinding](https://qiao.github.io/PathFinding.js/visual/)  
 [Youtube : mattbatwings](https://www.youtube.com/watch?v=uctN47p_KVk)  
 [Wikipedia : Maze generation algorithm](https://en.wikipedia.org/wiki/Maze_generation_algorithm)  
+[Wikipedia : A* search algorithm](https://en.wikipedia.org/wiki/A*_search_algorithm) 
 [Mazegenerator](https://www.mazegenerator.net/)  
-[Pathfinding](https://qiao.github.io/PathFinding.js/visual/)  
+[Chatgpt](https://chatgpt.com)  
+[Gemini](https://gemini.google.com/)  
 
 ### MANAGEMENT
 
@@ -115,4 +121,5 @@ the work througout the project.
   * Maze solving
   * Makefile and install
   * README
+
 
