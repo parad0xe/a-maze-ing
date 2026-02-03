@@ -32,7 +32,7 @@ class Palette(BaseModel):
         return is_dirty
 
     def randomize(self) -> None:
-        for key in self.model_fields:
+        for key in vars(self):
             if key != "empty":
                 setattr(self, key, random_color())
 

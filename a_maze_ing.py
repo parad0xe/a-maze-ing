@@ -13,6 +13,7 @@ from engine import (
     GraphicalEngine,
     KeyCode,
 )
+from errors import ExitCode
 from loader import load
 from pydantic import ValidationError
 
@@ -104,7 +105,7 @@ def update(
             maze.export()
         except (OSError, UnicodeEncodeError) as e:
             logger.error(f"export failed: {type(e).__name__}: {e}")
-            controls.stop(4)
+            controls.stop(ExitCode.FILE_ERROR)
 
 
 def main() -> None:
@@ -114,7 +115,7 @@ def main() -> None:
         logger.error(
             f"Usage: python3 {os.path.basename(__file__)} <config_file>"
         )
-        sys.exit(1)
+        sys.exit(ExitCode.ARGUMENTS_ERROR)
 
     maze: Maze = load(sys.argv[1])
 
@@ -166,7 +167,7 @@ if __name__ == "__main__":
             field = " -> ".join(str(item) for item in error["loc"])
             message = error["msg"]
             logger.error(f"{type(e).__name__}: {message} ({field}) ")
-        sys.exit(2)
+        sys.exit(ExitCode.VALIDATION_ERROR)
     except Exception as e:
         logger.error(f"{type(e).__name__}: {e}")
-        sys.exit(3)
+        sys.exit(ExitCode.UNEXPECTED_ERROR)
