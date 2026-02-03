@@ -62,6 +62,7 @@ class CellState(IntEnum):
     SEEK = 1 << 8
     PATH = 1 << 9
     SEEK_PREMIUM = 1 << 10
+    IDLE_PATH = 1 << 11
 
 
 class WallDescriptor:
@@ -500,7 +501,7 @@ class Maze(BaseModel):
         with open(self.output_file, "w", encoding="utf-8") as f:
             i_x, i_y, e_x, e_y = (*self.entry, *self.exit)
             h, w = self.height, self.width
-            shortest_path: str = "".join(reversed(self.shortest_path))
+            shortest_path: str = "".join(self.shortest_path)
             for y in range(h):
                 f.write(
                     "".join(
@@ -621,6 +622,8 @@ class Maze(BaseModel):
                 self.set_state(cur["x"], cur["y"], CellState.PATH)
             cur = parent
             yield 1
+        self.shortest_path.reverse()
+        yield 1
 
     def solve(self) -> None:
         """
@@ -640,6 +643,7 @@ class Maze(BaseModel):
         path: list[tuple[int, int]] = [(0, 0)]
         turn: int = 0
         last_by_prob: bool = False
+        self.shortest_path = []
 
         if self.perfect:
             viewed.append((0, 0))
