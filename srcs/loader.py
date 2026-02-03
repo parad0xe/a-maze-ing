@@ -1,9 +1,8 @@
-import mazegen
 from typing import Any
 
+from errors import ParseError
 
-class ParseError(Exception):
-    pass
+import mazegen
 
 
 def load(input_file: str) -> mazegen.Maze:
