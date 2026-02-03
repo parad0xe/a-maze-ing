@@ -28,7 +28,7 @@ PYTHONPATH := srcs
 
 # rules
 install: pyproject.toml $(WHEEL) | $(PYTHON)
-	$(POETRY) install --no-root
+	$(POETRY) install --with dev --no-root
 
 run: install
 	@PYTHONPATH=$(PYTHONPATH) $(PYTHON) $(MAIN) $(ARGS)

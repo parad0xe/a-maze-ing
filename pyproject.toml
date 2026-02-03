@@ -7,9 +7,14 @@ packages = [{ include = "mazegen" }]
 python = ">=3.10"
 pydantic = "2.12.5"
 numpy = "2.2.6"
-mlx = { path = "libs/mlx-2.2-py3-none-any.whl" }
+
+[tool.poetry.group.dev]
+optional = true
+
+[tool.poetry.group.dev.dependencies]
 mypy = "1.19.1"
 flake8 = "7.3.0"
+mlx = { path = "libs/mlx-2.2-py3-none-any.whl" }
 
 [[tool.mypy.overrides]]
 module = "mlx.*"
