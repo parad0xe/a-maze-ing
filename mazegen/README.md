@@ -8,8 +8,8 @@ _This project has been created as part of the 42 curriculum by nlallema and ldec
 The module contains a main class called **_Maze_**. The main methods you may use
 in your project are :  
 - ``Maze.export()``  
-- ``Maze.solve()``  
 - ``Maze.generate()`` 
+- ``Maze.solve()``  
 
 To get an empty maze, you simply need to instantiate a ``Maze()`` and Pydantic will automatically
 fill the numpy table with closed walls. You then only need to call ``Maze.generate()`` to build walls,
@@ -28,3 +28,4 @@ Any invalid attribute will raise a **_ValidationError_**.
 After you called the ``Maze.solve()`` method, your maze's **shortest_path** attribute (list[str])
 will contain the shortest path between the entry and the exit. Finally, your maze's **array** attribute
 is the concrete maze (list[int16, int16]) handled by numpy.
+
