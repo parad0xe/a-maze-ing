@@ -88,6 +88,13 @@ class WallDescriptor:
         CellWall.EAST: (CellWall.WEST, (1, 0)),
     }
 
+    cardinals: dict[str, tuple[int, int]] = {
+        "N": (0, -1),
+        "S": (0, 1),
+        "E": (1, 0),
+        "W": (-1, 0),
+    }
+
 
 class Maze(BaseModel):
     """
@@ -231,23 +238,18 @@ class Maze(BaseModel):
         This chooses random reachable entry and exit coordinates.
         """
         self.shortest_path = []
-        while True:
-            new_entry: tuple[int, int] = (
-                self._random.integers(0, self.width - 1).item(),
-                self._random.integers(0, self.height - 1).item(),
-            )
-            if not self.get_cell(*new_entry)["state"] & CellState.UNREACHABLE:
-                break
-        self.entry = new_entry
-        while True:
-            new_exit: tuple[int, int] = (
-                self._random.integers(0, self.width - 1).item(),
-                self._random.integers(0, self.height - 1).item(),
-            )
-            if (not self.get_cell(*new_exit)["state"] & CellState.UNREACHABLE
-                    and new_exit != new_entry):
-                break
-        self.exit = new_exit
+        mask = (self._array["state"] & CellState.UNREACHABLE) == 0
+        valid_coords = np.argwhere(mask)
+
+        indices = self._random.choice(
+            valid_coords.shape[0], size=2, replace=False
+        )
+
+        y1, x1 = valid_coords[indices[0]]
+        y2, x2 = valid_coords[indices[1]]
+
+        self.entry = (int(x1), int(y1))
+        self.exit = (int(x2), int(y2))
 
     def display_42(self) -> None:
         """
