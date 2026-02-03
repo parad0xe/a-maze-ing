@@ -76,22 +76,51 @@ SEED=42
 As you can see, lines starting by *__#__* are ignored by the parser.
 
 ### ALGORITHMS
-*The maze generation algorithm you chose*
-*Why you chose this algorithm*
+
+For the solving, we implemented an A* algorithm. We chose this one because it is popular and
+used in videogames. Having heard many times about this one gave the curiosity to understand it
+and to know how to code it.  
+
+*The maze generation algorithm you chose* to delete
+*Why you chose this algorithm* to delete
 
 ### RESOURCES
 The links down below helped us in **_understanding_** how works maze generation, and getting
-**_inspiration_** before starting.
+**_inspiration_** before starting. IA helped on **_debugging_**.
 
-[Youtube : mattbatwings](https://www.youtube.com/watch?v=uctN47p_KVk)
-[Wikipedia : Maze generation algorithm](https://en.wikipedia.org/wiki/Maze_generation_algorithm)
-*listing classic references related to the topic (documentation, articles, tutorials, etc.), as well as a description of how AI was used —
-specifying for which tasks and which parts of the project*
+[Pathfinding](https://qiao.github.io/PathFinding.js/visual/)  
+[Youtube : mattbatwings](https://www.youtube.com/watch?v=uctN47p_KVk)  
+[Wikipedia : Maze generation algorithm](https://en.wikipedia.org/wiki/Maze_generation_algorithm)  
+[Wikipedia : A* search algorithm](https://en.wikipedia.org/wiki/A*_search_algorithm) 
+[Mazegenerator](https://www.mazegenerator.net/)  
+[Chatgpt](https://chatgpt.com)  
+[Gemini](https://gemini.google.com/)  
 
 ### MANAGEMENT
-*The roles of each team member*
-*Your anticipated planning and how it evolved until the end*
-*What worked well and what could be improved*
-*Have you used any specific tools? Which ones?*
+
+We tried to get a nice organization like we did on the **_push_swap_** project but using MLX for the
+first time resulted on coding some parts without knowing how it would connect with the rest of the
+project. If we could improve our planning, we would plan better by trying using the MLX without
+implementing it in the project immediately. We still managed to use git at our advantage to split
+the work througout the project.
+
+[nlallema](https://github.com/parad0xe) : 
+  * Project structure
+  * Display  
+  * Maze
+  * Parsing
+  * Maze generation
+  * Colours
+  * README
+  
+[ldecavel](https://github.com/leonardecavele) :  
+  * Project structure
+  * Display  
+  * Maze
+  * Parsing
+  * Maze solving
+  * Makefile and install
+  * README
+
 
 
