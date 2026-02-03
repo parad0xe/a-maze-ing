@@ -81,8 +81,8 @@ For the solving, we implemented an A* algorithm. We chose this one because it is
 used in videogames. Having heard many times about this one gave the curiosity to understand it
 and to know how to code it.  
 
-*The maze generation algorithm you chose* to delete
-*Why you chose this algorithm* to delete
+For the generation, we implemented a depth-first search (DFS) in idea. The generation was 
+created without consulting any specific algorithm or theory, so DFS was not deliberately chosen.
 
 ### RESOURCES
 The links down below helped us in **_understanding_** how works maze generation, and getting
