@@ -101,12 +101,6 @@ def update(
             controls.render()
         args.solver = None
 
-        try:
-            maze.export()
-        except (OSError, UnicodeEncodeError) as e:
-            logger.error(f"export failed: {type(e).__name__}: {e}")
-            sys.exit(3)
-
 
 def main() -> None:
     logging.config.dictConfig(LOGGING_CONFIG)
@@ -157,6 +151,12 @@ def main() -> None:
         ),
     )
 
+    try:
+        maze.export()
+    except (OSError, UnicodeEncodeError) as e:
+        logger.error(f"export failed: {type(e).__name__}: {e}")
+        sys.exit(4)
+
 
 if __name__ == "__main__":
     try:
@@ -169,4 +169,4 @@ if __name__ == "__main__":
         sys.exit(2)
     except Exception as e:
         logger.error(f"{type(e).__name__}: {e}")
-        sys.exit(2)
+        sys.exit(3)
