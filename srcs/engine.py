@@ -167,7 +167,7 @@ class GraphicalEngine:
         args: tuple["GraphicalEngine", tuple[UpdateCallback, EngineContext]],
     ) -> None:
         """
-        This wraps the update callback and refreshes tiles if the palette changed.
+        This wraps the callback and refreshes tiles if the palette changed.
 
         Args:
             args: Engine instance plus (update_callback, engine_context).
@@ -270,7 +270,7 @@ class GraphicalEngine:
 
         def clear(self) -> None:
             """
-            This clears transient states while keeping unreachable, entry and exit.
+            This clears states while keeping unreachable, entry and exit.
             """
             self._engine._show_path = True
             self._engine._maze.mask(
