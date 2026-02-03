@@ -1,10 +1,8 @@
-# standard modules
 import logging
 import random
 from enum import IntEnum
 from typing import Annotated, Any, Iterator, TypeAlias, cast
 
-# extern modules
 import numpy as np
 import numpy.typing as npt
 from pydantic import (
@@ -15,10 +13,8 @@ from pydantic import (
     field_validator,
 )
 
-# logger config
 logger: logging.Logger = logging.getLogger(__name__)
 
-# defines
 MIN_EDGE_SIZE: int = 1
 MAX_EDGE_SIZE: int = 50
 
@@ -27,8 +23,16 @@ MazeArray: TypeAlias = npt.NDArray[np.void]
 Cell: TypeAlias = np.void
 
 
-# enums
 class CellWall(IntEnum):
+    """
+    This enum stores bit flags for the four cell walls.
+
+    Attributes:
+        NORTH (int): Bit flag for the north wall.
+        EAST (int): Bit flag for the east wall.
+        SOUTH (int): Bit flag for the south wall.
+        WEST (int): Bit flag for the west wall.
+    """
     NORTH = 1
     EAST = 1 << 1
     SOUTH = 1 << 2
@@ -36,6 +40,19 @@ class CellWall(IntEnum):
 
 
 class CellState(IntEnum):
+    """
+    This enum stores bit flags for the logical cell state.
+
+    Attributes:
+        EMPTY (int): No special state.
+        ENTRY (int): Entry cell marker.
+        EXIT (int): Exit cell marker.
+        UNREACHABLE (int): Blocked cell marker.
+        CURSOR (int): Generation cursor marker.
+        SEEK (int): Visited cell marker.
+        PATH (int): Final path marker.
+        SEEK_PREMIUM (int): Priority frontier marker.
+    """
     EMPTY = 0
     ENTRY = 1 << 4
     EXIT = 1 << 5
@@ -47,6 +64,13 @@ class CellState(IntEnum):
 
 
 class WallDescriptor:
+    """
+    This helper provides direction deltas and opposite wall mapping.
+
+    Attributes:
+        walls: Wall flag and delta pairs.
+        opposites: Opposite wall and delta by wall.
+    """
     walls: list[tuple[CellWall, tuple[int, int]]] = [
         (CellWall.NORTH, (0, -1)),
         (CellWall.SOUTH, (0, 1)),
@@ -62,8 +86,22 @@ class WallDescriptor:
     }
 
 
-# main class
 class Maze(BaseModel):
+    """
+    This model stores a maze grid, with generation, solving and export.
+
+    Attributes:
+        model_config (ConfigDict): Pydantic model configuration.
+        width: Maze width in cells.
+        height: Maze height in cells.
+        entry: Entry coordinates (x, y).
+        exit: Exit coordinates (x, y).
+        perfect: Perfect maze generation toggle.
+        shortest_path: Path letters from entry to exit.
+        seed: Optional random seed.
+        output_file: Output path for export().
+        array: Numpy grid holding walls and state.
+    """
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
 
     width: int = Field(frozen=True, ge=MIN_EDGE_SIZE, le=MAX_EDGE_SIZE)
@@ -81,6 +119,18 @@ class Maze(BaseModel):
     )
 
     def model_post_init(self, _: Any) -> None:
+        """
+        This hook validates inputs and initializes the internal grid.
+
+        Args:
+            _: Unused pydantic context.
+
+        Raises:
+            ValueError: Entry is out of bounds.
+            ValueError: Exit is out of bounds.
+            ValueError: Entry is on an unreachable cell.
+            ValueError: Exit is on an unreachable cell.
+        """
         if self.is_out_of_bounds(*self.entry):
             raise ValueError(
                 f"Entry coordinates is out of bounds {self.entry}"
@@ -104,6 +154,17 @@ class Maze(BaseModel):
         logger.debug("Maze model intialized")
 
     def __setattr__(self, name: str, value: Any) -> None:
+        """
+        This override keeps entry and exit state markers in sync.
+
+        Args:
+            name: Attribute name.
+            value: Attribute value.
+
+        Raises:
+            ValueError: Entry is on an unreachable cell.
+            ValueError: Exit is on an unreachable cell.
+        """
         if not name.startswith("_"):
             if name == "entry":
                 x, y = value
@@ -126,6 +187,19 @@ class Maze(BaseModel):
     @field_validator("entry", "exit", mode="before")
     @classmethod
     def _parse_coordinates(cls, v: Any) -> tuple[int, int] | Any:
+        """
+        This parses "x,y" strings into integer coordinate tuples.
+
+        Args:
+            cls (type): Owning class.
+            v: Raw coordinate value.
+
+        Returns:
+            The parsed (x, y) tuple or the original value.
+
+        Raises:
+            ValueError: The string format is invalid.
+        """
         if isinstance(v, str):
             logger.debug("Parse string entry/exit coordinates")
             coords: list[int] = [int(p.strip()) for p in v.split(",")]
@@ -135,10 +209,16 @@ class Maze(BaseModel):
         return v
 
     def initialize(self) -> None:
+        """
+        This resets the grid then stamps the 42 pattern.
+        """
         self.set(walls=0xF, state=0x0)
         self.display_42()
 
     def random_entry_exit(self) -> None:
+        """
+        This chooses random reachable entry and exit coordinates.
+        """
         while True:
             new_entry: tuple[int, int] = (
                 random.randint(0, self.width - 1),
@@ -158,7 +238,12 @@ class Maze(BaseModel):
         self.exit = new_exit
 
     def display_42(self) -> None:
-        # fmt: off
+        """
+        This marks a centered unreachable "42" bitmap on the grid.
+
+        Raises:
+            ValueError: Maze is too small for the pattern.
+        """
         answer = np.array([
             [1, 0, 0, 0, 1, 1, 1],
             [1, 0, 0, 0, 0, 0, 1],
@@ -166,7 +251,6 @@ class Maze(BaseModel):
             [0, 0, 1, 0, 1, 0, 0],
             [0, 0, 1, 0, 1, 1, 1],
         ], dtype=np.int16) * CellState.UNREACHABLE
-        # fmt: on
 
         sx: int = (self.width // 2) - (answer.shape[1] // 2)
         sy: int = (self.height // 2) - (answer.shape[0] // 2)
@@ -179,11 +263,31 @@ class Maze(BaseModel):
         self.array[sy:ey, sx:ex]["state"] = answer
 
     def get_cell(self, x: int, y: int) -> Cell:
+        """
+        This returns the cell record at (x, y) after bounds checking.
+
+        Args:
+            x: Cell x coordinate.
+            y: Cell y coordinate.
+
+        Returns:
+            The numpy record for the cell.
+
+        Raises:
+            ValueError: Coordinates are out of bounds.
+        """
         if self.is_out_of_bounds(x, y):
             raise ValueError(f"out of bound ({x}, {y})")
         return cast(Cell, self.array[y][x])
 
     def mask(self, walls: int | None = None, state: int | None = None) -> None:
+        """
+        This applies an AND mask on all walls and or state fields.
+
+        Args:
+            walls: Wall mask for all cells.
+            state: State mask for all cells.
+        """
         if walls is not None:
             walls, _ = self._demux(walls)
             self.array["walls"] &= walls
@@ -192,6 +296,13 @@ class Maze(BaseModel):
             self.array["state"] &= state
 
     def set(self, walls: int | None = None, state: int | None = None) -> None:
+        """
+        This overwrites all walls and or state fields with the given flags.
+
+        Args:
+            walls: Wall flags for all cells.
+            state: State flags for all cells.
+        """
         if state is not None:
             _, state = self._demux(state)
             self.array["state"] = state
@@ -204,6 +315,13 @@ class Maze(BaseModel):
         walls: int | None = None,
         state: int | None = None,
     ) -> None:
+        """
+        This clears selected walls and or state bits on all cells.
+
+        Args:
+            walls: Wall bits to clear.
+            state: State bits to clear.
+        """
         if state is not None:
             _, state = self._demux(state)
             self.array["state"] &= ~state
@@ -212,6 +330,17 @@ class Maze(BaseModel):
             self.array["walls"] &= ~walls
 
     def set_walls(self, x: int, y: int, walls: int) -> None:
+        """
+        This sets wall bits on a cell and mirrors them on neighbours.
+
+        Args:
+            x: Cell x coordinate.
+            y: Cell y coordinate.
+            walls: Wall bits to set.
+
+        Raises:
+            ValueError: Coordinates are out of bounds.
+        """
         if self.is_out_of_bounds(x, y):
             raise ValueError(f"out of bound ({x}, {y})")
         walls, _ = self._demux(walls)
@@ -219,6 +348,17 @@ class Maze(BaseModel):
             self._sync_neighbours(x, y, walls, on=True)
 
     def unset_walls(self, x: int, y: int, walls: int) -> None:
+        """
+        This clears wall bits on a cell and mirrors them on neighbours.
+
+        Args:
+            x: Cell x coordinate.
+            y: Cell y coordinate.
+            walls: Wall bits to clear.
+
+        Raises:
+            ValueError: Coordinates are out of bounds.
+        """
         if self.is_out_of_bounds(x, y):
             raise ValueError(f"out of bound ({x}, {y})")
         walls, _ = self._demux(walls)
@@ -226,6 +366,17 @@ class Maze(BaseModel):
             self._sync_neighbours(x, y, walls, on=False)
 
     def set_state(self, x: int, y: int, state: int) -> None:
+        """
+        This overwrites the state field of one cell.
+
+        Args:
+            x: Cell x coordinate.
+            y: Cell y coordinate.
+            state: State flags to set.
+
+        Raises:
+            ValueError: Coordinates are out of bounds.
+        """
         if self.is_out_of_bounds(x, y):
             raise ValueError(f"out of bound ({x}, {y})")
         _, state = self._demux(state)
@@ -234,6 +385,21 @@ class Maze(BaseModel):
     def has_walls(
         self, x: int, y: int, walls: int, strict: bool = True
     ) -> bool:
+        """
+        This tests wall bits for a cell using strict or alternate logic.
+
+        Args:
+            x: Cell x coordinate.
+            y: Cell y coordinate.
+            walls: Wall bits to test.
+            strict: True for simple overlap test.
+
+        Returns:
+            True if the test matches.
+
+        Raises:
+            ValueError: Coordinates are out of bounds.
+        """
         if self.is_out_of_bounds(x, y):
             raise ValueError(f"out of bound ({x}, {y})")
         if strict:
@@ -243,9 +409,31 @@ class Maze(BaseModel):
             return bool(((self.array[y][x]["walls"] | ~walls) ^ mask) | walls)
 
     def is_out_of_bounds(self, x: int, y: int) -> bool:
+        """
+        This returns True when (x, y) is outside the maze bounds.
+
+        Args:
+            x: Cell x coordinate.
+            y: Cell y coordinate.
+
+        Returns:
+            True if out of bounds.
+        """
         return x < 0 or y < 0 or x >= self.width or y >= self.height
 
     def _apply_walls(self, x: int, y: int, walls: int, on: bool) -> bool:
+        """
+        This sets or clears wall bits and flags the maze as dirty on change.
+
+        Args:
+            x: Cell x coordinate.
+            y: Cell y coordinate.
+            walls: Wall bits to update.
+            on: True to set, False to clear.
+
+        Returns:
+            True if the value changed.
+        """
         last: int = self.array[y][x]["walls"]
         if on:
             self.array[y][x]["walls"] |= walls
@@ -257,6 +445,15 @@ class Maze(BaseModel):
         return False
 
     def _sync_neighbours(self, x: int, y: int, walls: int, on: bool) -> None:
+        """
+        This mirrors wall updates to neighbour cells using opposite walls.
+
+        Args:
+            x: Cell x coordinate.
+            y: Cell y coordinate.
+            walls: Wall bits that changed.
+            on: True to set, False to clear.
+        """
         for wall in WallDescriptor.opposites:
             if not wall & walls:
                 continue
@@ -267,11 +464,23 @@ class Maze(BaseModel):
                 self._apply_walls(nx, ny, opposite_wall, on=on)
 
     def _demux(self, flags: int) -> tuple[int, int]:
+        """
+        This splits combined flags into (walls, state) parts.
+
+        Args:
+            flags: Combined flags value.
+
+        Returns:
+            A pair (walls, state).
+        """
         walls = flags & 0xF
         state = flags & ~0xF
         return (walls, state)
 
     def export(self) -> None:
+        """
+        This writes walls, entry, exit, and shortest path to output_file.
+        """
         logger.debug("Generating file")
         with open(self.output_file, "w", encoding="utf-8") as f:
             i_x, i_y, e_x, e_y = (*self.entry, *self.exit)
@@ -290,11 +499,28 @@ class Maze(BaseModel):
             f.write(f"{e_x},{e_y}\n")
             f.write(f"{shortest_path}")
 
-    # solve
     def iter_solve(self) -> Iterator[int]:
+        """
+        This yields steps while running an A star like shortest path search.
+
+        Returns:
+            An iterator of step ticks.
+        """
         def cell_data(
             x: int, y: int, step: int, parent: dict[str, Any] | None
         ) -> dict[str, Any]:
+            """
+            This builds a solver node record for the priority queue.
+
+            Args:
+                x: Node x coordinate.
+                y: Node y coordinate.
+                step: Steps from entry.
+                parent: Parent node record.
+
+            Returns:
+                A dict with costs and a parent link.
+            """
             dist = abs(x - e_x) + abs(y - e_y)
             return {
                 "x": x,
@@ -381,11 +607,19 @@ class Maze(BaseModel):
             yield 1
 
     def solve(self) -> None:
+        """
+        This runs iter_solve() until completion.
+        """
         for _ in self.iter_solve():
             pass
 
-    # generation
     def iter_generate(self) -> Iterator[int]:
+        """
+        This yields steps while carving corridors by removing walls.
+
+        Returns:
+            An iterator of step ticks.
+        """
         viewed: list[tuple[int, int]] = []
         path: list[tuple[int, int]] = [(0, 0)]
         turn: int = 0
@@ -433,5 +667,8 @@ class Maze(BaseModel):
         yield 1
 
     def generate(self) -> None:
+        """
+        This runs iter_generate() until completion.
+        """
         for _ in self.iter_generate():
             pass
