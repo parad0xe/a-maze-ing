@@ -31,6 +31,17 @@ Tiles: TypeAlias = dict[TileKey, Tile]
 
 
 class KeyCode(IntEnum):
+    """
+    This enum stores ASCII key codes used by the engine.
+
+    Attributes:
+        C (int): Key code for solve action.
+        G (int): Key code for generate action.
+        N (int): Key code for random entry and exit.
+        Q (int): Key code for quit.
+        R (int): Key code for randomize palette.
+        S (int): Key code for toggle path display.
+    """
     C = 99
     G = 103
     N = 110
@@ -40,16 +51,33 @@ class KeyCode(IntEnum):
 
 
 class EngineConfig(BaseModel):
+    """
+    This model stores graphical sizes used to render the maze.
+
+    Attributes:
+        cell_size: Pixel size of one cell square.
+        wall_size: Pixel thickness of walls inside a cell.
+    """
     cell_size: int = Field(frozen=True)
     wall_size: int = Field(frozen=True)
 
 
 class EngineContext(BaseModel):
+    """
+    This model stores user arguments and the active palette for callbacks.
+
+    Attributes:
+        args: User provided loop context.
+        palette: Palette used to draw tiles.
+    """
     args: Any
     palette: Palette
 
 
 class GraphicalEngine:
+    """
+    This class renders a Maze with MiniLibX and runs a key and update loop.
+    """
 
     def __init__(
         self,
@@ -57,6 +85,14 @@ class GraphicalEngine:
         config: EngineConfig,
         palette: Palette,
     ) -> None:
+        """
+        This initializes MLX resources, precomputes tiles, and renders once.
+
+        Args:
+            maze: Maze instance to display.
+            config: Rendering configuration for cell and wall sizes.
+            palette: Colors used to draw maze states and walls.
+        """
         self._maze: Maze = maze
         self._width: int = maze.width * config.cell_size
         self._height: int = maze.height * config.cell_size
@@ -84,6 +120,9 @@ class GraphicalEngine:
         logger.debug("Graphical engine initialized")
 
     def _compute_tiles(self) -> None:
+        """
+        This rebuilds cached tiles for all wall and state combinations.
+        """
         wall_size: int = self._config.wall_size
         cell_size: int = self._config.cell_size
 
@@ -127,6 +166,12 @@ class GraphicalEngine:
     def _update(
         args: tuple["GraphicalEngine", tuple[UpdateCallback, EngineContext]],
     ) -> None:
+        """
+        This wraps the callback and refreshes tiles if the palette changed.
+
+        Args:
+            args: Engine instance plus (update_callback, engine_context).
+        """
         self, (callback, context) = args
         callback(self._maze, self.controls, context)
 
@@ -139,6 +184,16 @@ class GraphicalEngine:
         keycode: int,
         args: tuple["GraphicalEngine", tuple[KeypressCallback, EngineContext]],
     ) -> int:
+        """
+        This wraps the keypress callback with the engine and context.
+
+        Args:
+            keycode: Pressed key code from MLX.
+            args: Engine instance plus (keypress_callback, engine_context).
+
+        Returns:
+            The callback return code.
+        """
         self, (callback, context) = args
         return callback(keycode, self._maze, self.controls, context)
 
@@ -148,6 +203,17 @@ class GraphicalEngine:
         keypress: KeypressCallback | None = None,
         args: Any = None,
     ) -> int:
+        """
+        This runs the MLX loop with update and optional keypress hooks.
+
+        Args:
+            callback: Per frame update callback.
+            keypress: Optional keypress callback.
+            args: User object stored in EngineContext.args.
+
+        Returns:
+            The exit code stored in controls.
+        """
         context: EngineContext = EngineContext(
             args=args,
             palette=self._palette,
@@ -167,21 +233,45 @@ class GraphicalEngine:
         return self.controls.exit_code
 
     class Controls:
+        """
+        This helper exposes safe actions to control the engine loop and view.
+
+        Attributes:
+            exit_code: Process exit code set when stopping the loop.
+        """
         exit_code: int = 0
 
         def __init__(self, engine: "GraphicalEngine") -> None:
+            """
+            This stores a reference to the owning engine.
+
+            Args:
+                engine: GraphicalEngine instance to control.
+            """
             self._engine: "GraphicalEngine" = engine
 
         def stop(self, code: int = 0) -> None:
+            """
+            This stops the MLX loop and stores an exit code.
+
+            Args:
+                code: Exit code to return from GraphicalEngine.loop().
+            """
             self.exit_code = code
             self._engine._mlx.mlx_loop_exit(self._engine._mlx_ptr)
 
         def reinitialize(self) -> None:
+            """
+            This resets the maze and redraws with the path display enabled.
+            """
             self._engine._show_path = True
             self._engine._maze.initialize()
             self.render()
 
         def clear(self) -> None:
+            """
+            This clears states while keeping unreachable, entry and exit.
+            """
             self._engine._show_path = True
             self._engine._maze.mask(
                 state=(
@@ -191,10 +281,16 @@ class GraphicalEngine:
             self.render()
 
         def toggle_path(self) -> None:
+            """
+            This toggles path and search overlays visibility then redraws.
+            """
             self._engine._show_path = not self._engine._show_path
             self.render()
 
         def render(self) -> None:
+            """
+            This draws the maze grid into the image buffer and displays it.
+            """
             self._engine._mlx.mlx_clear_window(
                 self._engine._mlx_ptr, self._engine._window
             )

@@ -7,19 +7,19 @@ import mazegen
 
 def load(input_file: str) -> mazegen.Maze:
     """
-    [TODO:description]
+    This loads a key value config file and builds a Maze from it.
 
     Args:
-        input_file: [TODO:description]
+        input_file: Path to the configuration file to read.
 
     Returns:
-        [TODO:description]
+        A validated Maze instance built from the parsed values.
 
     Raises:
-        ParseError: [TODO:description]
-        FileNotFoundError: [TODO:description]
-        OSError: [TODO:description]
-        ValidationError: [TODO:description]
+        ParseError: The file contains invalid lines or empty keys or values.
+        FileNotFoundError: The input file does not exist.
+        OSError: An OS level error occurred while reading the file.
+        ValidationError: The parsed values dont satisfy Maze validation rules.
     """
     values: dict[str, Any] = {}
     with open(input_file, "r", encoding="utf-8") as f:
