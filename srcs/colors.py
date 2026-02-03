@@ -19,6 +19,7 @@ class Palette(BaseModel):
         wall: RGBA color for walls.
         empty: RGBA color for empty background.
     """
+
     entry: int
     exit: int
     unreachable: int
@@ -28,6 +29,7 @@ class Palette(BaseModel):
     path: int
     wall: int
     empty: int
+    idle_path: int
 
     _is_dirty: bool = True
 
@@ -83,6 +85,7 @@ class Rgba(BaseModel):
         b: Blue channel value.
         a: Alpha channel value.
     """
+
     r: int
     g: int
     b: int

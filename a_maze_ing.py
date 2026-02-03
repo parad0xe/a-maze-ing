@@ -16,7 +16,7 @@ from errors import ExitCode
 from loader import load
 from pydantic import ValidationError
 
-from mazegen import Maze
+from mazegen import CellState, Maze
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -60,6 +60,9 @@ class LoopContext:
 
     generator: Iterator[int] | None = None
     solver: Iterator[int] | None = None
+    idle_index: int = 0
+    idle_previous_cell: tuple[int, int] | None = None
+    idle_cell: tuple[int, int] = (0, 0)
 
 
 def keypress(
@@ -85,9 +88,11 @@ def keypress(
 
     match keycode:
         case KeyCode.G:
+            args.idle_index = 0
             controls.reinitialize()
             args.generator = maze.iter_generate()
         case KeyCode.C:
+            args.idle_index = 0
             controls.clear()
             args.solver = maze.iter_solve()
         case KeyCode.Q:
@@ -95,6 +100,8 @@ def keypress(
         case KeyCode.R:
             palette.randomize()
         case KeyCode.N:
+            args.idle_index = 0
+            maze.shortest_path = []
             controls.clear()
             maze.random_entry_exit()
             controls.render()
@@ -133,6 +140,37 @@ def update(
         except (OSError, UnicodeEncodeError) as e:
             logger.error(f"export failed: {type(e).__name__}: {e}")
             controls.stop(ExitCode.FILE_ERROR)
+        args.idle_cell = maze.entry
+        args.idle_previous_cell = None
+
+    if maze.shortest_path:
+        len_shortest_path: int = len(maze.shortest_path)
+        char: str = maze.shortest_path[args.idle_index % len_shortest_path]
+        if args.idle_previous_cell:
+            if args.idle_previous_cell == maze.entry:
+                maze.set_state(*args.idle_previous_cell, CellState.ENTRY)
+            elif args.idle_previous_cell == maze.exit:
+                maze.set_state(*args.idle_previous_cell, CellState.EXIT)
+            else:
+                maze.set_state(*args.idle_previous_cell, CellState.PATH)
+
+        if args.idle_cell == maze.exit:
+            args.idle_cell = maze.entry
+        args.idle_previous_cell = args.idle_cell
+        if char == "W":
+            args.idle_cell = (args.idle_cell[0] - 1, args.idle_cell[1])
+        elif char == "E":
+            args.idle_cell = (args.idle_cell[0] + 1, args.idle_cell[1])
+        elif char == "S":
+            args.idle_cell = (args.idle_cell[0], args.idle_cell[1] + 1)
+        elif char == "N":
+            args.idle_cell = (args.idle_cell[0], args.idle_cell[1] - 1)
+
+        if args.idle_cell != maze.exit:
+            maze.set_state(*args.idle_cell, CellState.IDLE_PATH)
+
+        args.idle_index += 1
+        controls.render()
 
 
 def main() -> None:
@@ -155,13 +193,14 @@ def main() -> None:
 
     engine = GraphicalEngine(
         maze=maze,
-        config=EngineConfig(wall_size=2, cell_size=40),
+        config=EngineConfig(wall_size=2, cell_size=20),
         palette=Palette(
             empty=0x000000FF,
             wall=0x0000AAFF,
             unreachable=0xAAAAAAFF,
             cursor=0x00FF00FF,
             path=0xFF000055,
+            idle_path=0xFF000066,
             seek=0x00FF0033,
             seek_premium=0xFF00FFAA,
             entry=0xFFFFFFFF,
