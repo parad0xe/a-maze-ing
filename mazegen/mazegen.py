@@ -33,6 +33,7 @@ class CellWall(IntEnum):
         SOUTH (int): Bit flag for the south wall.
         WEST (int): Bit flag for the west wall.
     """
+
     NORTH = 1
     EAST = 1 << 1
     SOUTH = 1 << 2
@@ -53,6 +54,7 @@ class CellState(IntEnum):
         PATH (int): Final path marker.
         SEEK_PREMIUM (int): Priority frontier marker.
     """
+
     EMPTY = 0
     ENTRY = 1 << 4
     EXIT = 1 << 5
@@ -71,6 +73,7 @@ class WallDescriptor:
         walls: Wall flag and delta pairs.
         opposites: Opposite wall and delta by wall.
     """
+
     walls: list[tuple[CellWall, tuple[int, int]]] = [
         (CellWall.NORTH, (0, -1)),
         (CellWall.SOUTH, (0, 1)),
@@ -102,6 +105,7 @@ class Maze(BaseModel):
         output_file: Output path for export().
         array: Numpy grid holding walls and state.
     """
+
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
 
     width: int = Field(frozen=True, ge=MIN_EDGE_SIZE, le=MAX_EDGE_SIZE)
@@ -210,7 +214,7 @@ class Maze(BaseModel):
 
     def initialize(self) -> None:
         """
-        This resets the grid then stamps the 42 pattern.
+        This resets the grid then stamps the 42 pattern in the middle.
         """
         self.set(walls=0xF, state=0x0)
         self.display_42()
@@ -244,13 +248,18 @@ class Maze(BaseModel):
         Raises:
             ValueError: Maze is too small for the pattern.
         """
-        answer = np.array([
-            [1, 0, 0, 0, 1, 1, 1],
-            [1, 0, 0, 0, 0, 0, 1],
-            [1, 1, 1, 0, 1, 1, 1],
-            [0, 0, 1, 0, 1, 0, 0],
-            [0, 0, 1, 0, 1, 1, 1],
-        ], dtype=np.int16) * CellState.UNREACHABLE
+        answer = (
+            np.array(
+                [
+                    [1, 0, 0, 0, 1, 1, 1],
+                    [1, 0, 0, 0, 0, 0, 1],
+                    [1, 1, 1, 0, 1, 1, 1],
+                    [0, 0, 1, 0, 1, 0, 0],
+                    [0, 0, 1, 0, 1, 1, 1],
+                ],
+                dtype=np.int16,
+            ) * CellState.UNREACHABLE
+        )
 
         sx: int = (self.width // 2) - (answer.shape[1] // 2)
         sy: int = (self.height // 2) - (answer.shape[0] // 2)
@@ -386,19 +395,19 @@ class Maze(BaseModel):
         self, x: int, y: int, walls: int, strict: bool = True
     ) -> bool:
         """
-        This tests wall bits for a cell using strict or alternate logic.
+        This validate wall constraints using bitwise masks.
 
         Args:
-            x: Cell x coordinate.
-            y: Cell y coordinate.
-            walls: Wall bits to test.
-            strict: True for simple overlap test.
+            x: Cell x-coordinate.
+            y: Cell y-coordinate.
+            walls: Bitmask of walls to verify.
+            strict: If True, check for all; if False, check for any match.
 
         Returns:
-            True if the test matches.
+            Boolean indicating if the cell meets the wall bitmask criteria.
 
         Raises:
-            ValueError: Coordinates are out of bounds.
+            ValueError: If coordinates are outside the grid boundaries.
         """
         if self.is_out_of_bounds(x, y):
             raise ValueError(f"out of bound ({x}, {y})")
@@ -406,7 +415,7 @@ class Maze(BaseModel):
             return bool(self.array[y][x]["walls"] & walls)
         else:
             mask = self.array[y][x]["walls"] | ~walls
-            return bool(((self.array[y][x]["walls"] | ~walls) ^ mask) | walls)
+            return bool((self.array[y][x]["walls"] | ~walls) ^ mask)
 
     def is_out_of_bounds(self, x: int, y: int) -> bool:
         """
@@ -506,6 +515,7 @@ class Maze(BaseModel):
         Returns:
             An iterator of step ticks.
         """
+
         def cell_data(
             x: int, y: int, step: int, parent: dict[str, Any] | None
         ) -> dict[str, Any]:

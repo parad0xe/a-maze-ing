@@ -16,7 +16,7 @@ To get an empty maze, you simply need to instantiate a ``Maze()`` and Pydantic w
 fill the numpy table with closed walls. You then only need to call ``Maze.generate()`` to build walls,
 and then ``Maze.solve()`` to get the shortest path from the entry to the exit. If you want to get a
 formatted output with the maze specs, you can use ``Maze.export()``. To clear the current maze, 
-you can use ``Maze.initialize()``. It will automatically display 42 in the center.
+you can use ``Maze.initialize()``. It will automatically turn on all walls and display 42 in the center.
 
 To create a ``Maze()`` instance, you can pass it these attributes :
 - **width** (int between 1 and 50)  
