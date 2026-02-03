@@ -1,7 +1,6 @@
 import logging
 import logging.config
 import os
-import random
 import sys
 from dataclasses import dataclass
 from typing import Iterator
@@ -58,6 +57,7 @@ class LoopContext:
         generator: Iterator used to animate maze generation.
         solver: Iterator used to animate maze solving.
     """
+
     generator: Iterator[int] | None = None
     solver: Iterator[int] | None = None
 
@@ -149,7 +149,6 @@ def main() -> None:
 
     maze: Maze = load(sys.argv[1])
 
-    random.seed(maze.seed)
     engine = GraphicalEngine(
         maze=maze,
         config=EngineConfig(wall_size=2, cell_size=40),

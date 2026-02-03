@@ -1,7 +1,6 @@
 import logging
-import random
 from enum import IntEnum
-from typing import Annotated, Any, Iterator, TypeAlias, cast
+from typing import Any, Iterator, TypeAlias, cast
 
 import numpy as np
 import numpy.typing as npt
@@ -9,7 +8,7 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
-    SkipValidation,
+    PrivateAttr,
     field_validator,
 )
 
@@ -118,8 +117,12 @@ class Maze(BaseModel):
 
     output_file: str = Field(min_length=1)
 
-    array: Annotated[MazeArray, SkipValidation] = Field(
+    _array: MazeArray = PrivateAttr(
         default_factory=lambda: np.zeros((0, 0), dtype=MAZE_ARRAY_DT)
+    )
+
+    _random: np.random.Generator = PrivateAttr(
+        default_factory=lambda: np.random.default_rng(None)
     )
 
     def model_post_init(self, _: Any) -> None:
@@ -147,13 +150,16 @@ class Maze(BaseModel):
         logger.debug(
             f"Initialize map data with zeros ({self.width} x {self.height})"
         )
-        self.array = np.zeros((self.height, self.width), dtype=MAZE_ARRAY_DT)
+        self._array = np.zeros((self.height, self.width), dtype=MAZE_ARRAY_DT)
         self.initialize()
 
         if self.get_cell(*self.entry)["state"] & CellState.UNREACHABLE:
             raise ValueError("entry cannot be spawn on unreachable cell")
         if self.get_cell(*self.exit)["state"] & CellState.UNREACHABLE:
             raise ValueError("entry cannot be spawn on unreachable cell")
+
+        if self.seed is not None:
+            self._random = np.random.default_rng(self.seed)
 
         logger.debug("Maze model intialized")
 
@@ -225,16 +231,16 @@ class Maze(BaseModel):
         """
         while True:
             new_entry: tuple[int, int] = (
-                random.randint(0, self.width - 1),
-                random.randint(0, self.height - 1),
+                self._random.integers(0, self.width - 1).item(),
+                self._random.integers(0, self.height - 1).item(),
             )
             if not self.get_cell(*new_entry)["state"] & CellState.UNREACHABLE:
                 break
         self.entry = new_entry
         while True:
             new_exit: tuple[int, int] = (
-                random.randint(0, self.width - 1),
-                random.randint(0, self.height - 1),
+                self._random.integers(0, self.width - 1).item(),
+                self._random.integers(0, self.height - 1).item(),
             )
             if (not self.get_cell(*new_exit)["state"] & CellState.UNREACHABLE
                     and new_exit != new_entry):
@@ -269,7 +275,7 @@ class Maze(BaseModel):
         if ex >= self.width or ey >= self.height:
             raise ValueError("maze is too small for display the life answer")
 
-        self.array[sy:ey, sx:ex]["state"] = answer
+        self._array[sy:ey, sx:ex]["state"] = answer
 
     def get_cell(self, x: int, y: int) -> Cell:
         """
@@ -287,7 +293,7 @@ class Maze(BaseModel):
         """
         if self.is_out_of_bounds(x, y):
             raise ValueError(f"out of bound ({x}, {y})")
-        return cast(Cell, self.array[y][x])
+        return cast(Cell, self._array[y][x])
 
     def mask(self, walls: int | None = None, state: int | None = None) -> None:
         """
@@ -299,10 +305,10 @@ class Maze(BaseModel):
         """
         if walls is not None:
             walls, _ = self._demux(walls)
-            self.array["walls"] &= walls
+            self._array["walls"] &= walls
         if state is not None:
             _, state = self._demux(state)
-            self.array["state"] &= state
+            self._array["state"] &= state
 
     def set(self, walls: int | None = None, state: int | None = None) -> None:
         """
@@ -314,10 +320,10 @@ class Maze(BaseModel):
         """
         if state is not None:
             _, state = self._demux(state)
-            self.array["state"] = state
+            self._array["state"] = state
         if walls is not None:
             walls, _ = self._demux(walls)
-            self.array["walls"] = walls
+            self._array["walls"] = walls
 
     def unset(
         self,
@@ -333,10 +339,10 @@ class Maze(BaseModel):
         """
         if state is not None:
             _, state = self._demux(state)
-            self.array["state"] &= ~state
+            self._array["state"] &= ~state
         if walls is not None:
             walls, _ = self._demux(walls)
-            self.array["walls"] &= ~walls
+            self._array["walls"] &= ~walls
 
     def set_walls(self, x: int, y: int, walls: int) -> None:
         """
@@ -389,7 +395,7 @@ class Maze(BaseModel):
         if self.is_out_of_bounds(x, y):
             raise ValueError(f"out of bound ({x}, {y})")
         _, state = self._demux(state)
-        self.array[y][x]["state"] = state
+        self._array[y][x]["state"] = state
 
     def has_walls(
         self, x: int, y: int, walls: int, strict: bool = True
@@ -412,10 +418,10 @@ class Maze(BaseModel):
         if self.is_out_of_bounds(x, y):
             raise ValueError(f"out of bound ({x}, {y})")
         if strict:
-            return bool(self.array[y][x]["walls"] & walls)
+            return bool(self._array[y][x]["walls"] & walls)
         else:
-            mask = self.array[y][x]["walls"] | ~walls
-            return bool((self.array[y][x]["walls"] | ~walls) ^ mask)
+            mask = self._array[y][x]["walls"] | ~walls
+            return bool((self._array[y][x]["walls"] | ~walls) ^ mask)
 
     def is_out_of_bounds(self, x: int, y: int) -> bool:
         """
@@ -443,12 +449,12 @@ class Maze(BaseModel):
         Returns:
             True if the value changed.
         """
-        last: int = self.array[y][x]["walls"]
+        last: int = self._array[y][x]["walls"]
         if on:
-            self.array[y][x]["walls"] |= walls
+            self._array[y][x]["walls"] |= walls
         else:
-            self.array[y][x]["walls"] &= ~walls
-        if last != self.array[y][x]["walls"]:
+            self._array[y][x]["walls"] &= ~walls
+        if last != self._array[y][x]["walls"]:
             self._is_dirty = True
             return True
         return False
@@ -498,7 +504,7 @@ class Maze(BaseModel):
             for y in range(h):
                 f.write(
                     "".join(
-                        format(int(self.array[y, x]["walls"]), "X")
+                        format(int(self._array[y, x]["walls"]), "X")
                         for x in range(w)
                     )
                 )
@@ -542,7 +548,7 @@ class Maze(BaseModel):
                 "parent": parent,
             }
 
-        brd: MazeArray = self.array
+        brd: MazeArray = self._array
         e_x, e_y = self.exit
         i_x, i_y = self.entry
 
@@ -647,8 +653,8 @@ class Maze(BaseModel):
             yield 1
             added = False
             random_walls = WallDescriptor.walls.copy()
-            random.shuffle(random_walls)
-            prob: float = random.random()
+            self._random.shuffle(random_walls)
+            prob: float = self._random.random()
             prob_ok: bool = False
             for wall, (dx, dy) in random_walls:
                 nx = cx + dx
