@@ -149,6 +149,10 @@ def main() -> None:
 
     maze: Maze = load(sys.argv[1])
 
+    if maze.width > 50 or maze.height > 50:
+        logger.error("maze width or height cannot be greater than 50")
+        sys.exit(ExitCode.VALUE_ERROR)
+
     engine = GraphicalEngine(
         maze=maze,
         config=EngineConfig(wall_size=2, cell_size=40),

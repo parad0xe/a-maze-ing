@@ -5,6 +5,7 @@ class ParseError(Exception):
     """
     This exception signals a configuration parsing failure.
     """
+
     pass
 
 
@@ -18,7 +19,9 @@ class ExitCode(IntEnum):
         ARGUMENTS_ERROR (int): Invalid or missing command line arguments.
         UNEXPECTED_ERROR (int): Any other unhandled error occurred.
     """
+
     VALIDATION_ERROR = 1
     FILE_ERROR = 2
     ARGUMENTS_ERROR = 3
-    UNEXPECTED_ERROR = 4
+    VALUE_ERROR = 4
+    UNEXPECTED_ERROR = 5
