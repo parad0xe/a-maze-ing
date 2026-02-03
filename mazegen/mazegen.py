@@ -230,6 +230,7 @@ class Maze(BaseModel):
         """
         This chooses random reachable entry and exit coordinates.
         """
+        self.shortest_path = []
         while True:
             new_entry: tuple[int, int] = (
                 self._random.integers(0, self.width - 1).item(),

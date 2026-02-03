@@ -101,7 +101,6 @@ def keypress(
             palette.randomize()
         case KeyCode.N:
             args.idle_index = 0
-            maze.shortest_path = []
             controls.clear()
             maze.random_entry_exit()
             controls.render()
@@ -193,7 +192,7 @@ def main() -> None:
 
     engine = GraphicalEngine(
         maze=maze,
-        config=EngineConfig(wall_size=2, cell_size=20),
+        config=EngineConfig(wall_size=2, cell_size=50),
         palette=Palette(
             empty=0x000000FF,
             wall=0x0000AAFF,
