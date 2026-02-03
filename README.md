@@ -79,10 +79,10 @@ As you can see, lines starting by *__#__* are ignored by the parser.
 
 For the solving, we implemented an A* algorithm. We chose this one because it is popular and
 used in videogames. Having heard many times about this one gave the curiosity to understand it
-and to know how to code it.
+and to know how to code it.  
 
-*The maze generation algorithm you chose*
-*Why you chose this algorithm*
+*The maze generation algorithm you chose* to delete
+*Why you chose this algorithm* to delete
 
 ### RESOURCES
 The links down below helped us in **_understanding_** how works maze generation, and getting
@@ -121,5 +121,6 @@ the work througout the project.
   * Maze solving
   * Makefile and install
   * README
+
 
 
