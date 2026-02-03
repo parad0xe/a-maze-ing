@@ -80,6 +80,11 @@ As you can see, lines starting by *__#__* are ignored by the parser.
 *Why you chose this algorithm*
 
 ### RESOURCES
+The links down below helped us in **_understanding_** how works maze generation, and getting
+**_inspiration_** before starting.
+
+[Youtube : mattbatwings](https://www.youtube.com/watch?v=uctN47p_KVk)
+[Wikipedia : Maze generation algorithm](https://en.wikipedia.org/wiki/Maze_generation_algorithm)
 *listing classic references related to the topic (documentation, articles, tutorials, etc.), as well as a description of how AI was used —
 specifying for which tasks and which parts of the project*
 
@@ -88,4 +93,5 @@ specifying for which tasks and which parts of the project*
 *Your anticipated planning and how it evolved until the end*
 *What worked well and what could be improved*
 *Have you used any specific tools? Which ones?*
+
 
