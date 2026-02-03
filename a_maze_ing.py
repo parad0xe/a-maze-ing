@@ -100,6 +100,11 @@ def update(
         for _ in args.solver:
             controls.render()
         args.solver = None
+        try:
+            maze.export()
+        except (OSError, UnicodeEncodeError) as e:
+            logger.error(f"export failed: {type(e).__name__}: {e}")
+            controls.stop(4)
 
 
 def main() -> None:
@@ -142,7 +147,7 @@ def main() -> None:
         flush=True,
     )
 
-    engine.loop(
+    exit_code: int = engine.loop(
         update,
         keypress=keypress,
         args=LoopContext(
@@ -150,12 +155,7 @@ def main() -> None:
             solver=maze.iter_solve(),
         ),
     )
-
-    try:
-        maze.export()
-    except (OSError, UnicodeEncodeError) as e:
-        logger.error(f"export failed: {type(e).__name__}: {e}")
-        sys.exit(4)
+    sys.exit(exit_code)
 
 
 if __name__ == "__main__":

@@ -147,7 +147,7 @@ class GraphicalEngine:
         callback: UpdateCallback,
         keypress: KeypressCallback | None = None,
         args: Any = None,
-    ) -> None:
+    ) -> int:
         context: EngineContext = EngineContext(
             args=args,
             palette=self._palette,
@@ -164,13 +164,16 @@ class GraphicalEngine:
             (self, (callback, context)),
         )
         self._mlx.mlx_loop(self._mlx_ptr)
+        return self.controls.exit_code
 
     class Controls:
+        exit_code: int = 0
 
         def __init__(self, engine: "GraphicalEngine") -> None:
             self._engine: "GraphicalEngine" = engine
 
-        def stop(self) -> None:
+        def stop(self, code: int = 0) -> None:
+            self.exit_code = code
             self._engine._mlx.mlx_loop_exit(self._engine._mlx_ptr)
 
         def reinitialize(self) -> None:
