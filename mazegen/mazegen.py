@@ -20,7 +20,7 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 # defines
 MIN_EDGE_SIZE: int = 1
-MAX_EDGE_SIZE: int = 500
+MAX_EDGE_SIZE: int = 50
 
 MAZE_ARRAY_DT = np.dtype([("walls", np.int16), ("state", np.int16)])
 MazeArray: TypeAlias = npt.NDArray[np.void]
