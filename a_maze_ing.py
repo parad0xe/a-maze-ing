@@ -51,6 +51,13 @@ LOGGING_CONFIG = {
 
 @dataclass
 class LoopContext:
+    """
+    This context stores the current generator and solver iterators.
+
+    Attributes:
+        generator: Iterator used to animate maze generation.
+        solver: Iterator used to animate maze solving.
+    """
     generator: Iterator[int] | None = None
     solver: Iterator[int] | None = None
 
@@ -61,6 +68,18 @@ def keypress(
     controls: GraphicalEngine.Controls,
     context: EngineContext,
 ) -> int:
+    """
+    This handles keyboard input and triggers generation, solving, or UI actions.
+
+    Args:
+        keycode: Pressed key code from the engine.
+        maze: Maze instance being displayed and modified.
+        controls: Engine controls used to render and stop the loop.
+        context: Engine context holding palette and loop arguments.
+
+    Returns:
+        Always returns 0 to keep the engine running.
+    """
     args: LoopContext = context.args
     palette = context.palette
 
@@ -90,6 +109,14 @@ def update(
     controls: GraphicalEngine.Controls,
     context: EngineContext,
 ) -> None:
+    """
+    This advances active iterators and renders frames, then exports after solving.
+
+    Args:
+        maze: Maze instance being generated or solved.
+        controls: Engine controls used to render and stop the loop.
+        context: Engine context holding loop arguments.
+    """
     args: LoopContext = context.args
 
     if args.generator is not None:
@@ -109,6 +136,9 @@ def update(
 
 
 def main() -> None:
+    """
+    This loads a config, creates the engine, and starts the interactive loop.
+    """
     logging.config.dictConfig(LOGGING_CONFIG)
 
     if len(sys.argv) < 2:
