@@ -110,7 +110,7 @@ the work througout the project.
   * Maze
   * Parsing
   * Maze generation
-  * Colours
+  * Engine core
   * README
   
 [ldecavel](https://github.com/leonardecavele) :  
@@ -121,6 +121,7 @@ the work througout the project.
   * Maze solving
   * Makefile and install
   * README
+
 
 
 
