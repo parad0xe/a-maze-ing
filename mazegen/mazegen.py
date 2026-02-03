@@ -2,7 +2,7 @@
 import logging
 import random
 from enum import IntEnum
-from typing import Annotated, Any, TypeAlias, Iterator, cast
+from typing import Annotated, Any, Iterator, TypeAlias, cast
 
 # extern modules
 import numpy as np
@@ -291,14 +291,14 @@ class Maze(BaseModel):
             f.write(f"{shortest_path}")
 
     # solve
-    def solve(self) -> Iterator[int]:
-
+    def iter_solve(self) -> Iterator[int]:
         def cell_data(
-                x: int, y: int, step: int, parent: dict[str, Any] | None
+            x: int, y: int, step: int, parent: dict[str, Any] | None
         ) -> dict[str, Any]:
             dist = abs(x - e_x) + abs(y - e_y)
             return {
-                "x": x, "y": y,
+                "x": x,
+                "y": y,
                 "cell": brd[y][x],
                 "step": step,
                 "dist": dist,
@@ -316,8 +316,11 @@ class Maze(BaseModel):
         processing.append(cell_data(i_x, i_y, 0, None))
 
         while processing:
-            cur = processing.pop(min(range(
-                len(processing)), key=lambda i: processing[i]["score"])
+            cur = processing.pop(
+                min(
+                    range(len(processing)),
+                    key=lambda i: processing[i]["score"],
+                )
             )
             c_x: int = cur["x"]
             c_y: int = cur["y"]
@@ -371,19 +374,18 @@ class Maze(BaseModel):
                 elif dx == 0 and dy == -1:
                     self.shortest_path.append("N")
 
-            if not self.get_cell(
-                cur["x"], cur["y"]
-            )["state"] & (CellState.ENTRY | CellState.EXIT):
+            if not self.get_cell(cur["x"], cur["y"])["state"] & (
+                    CellState.ENTRY | CellState.EXIT):
                 self.set_state(cur["x"], cur["y"], CellState.PATH)
             cur = parent
             yield 1
 
-    def solve_maze(self) -> None:
-        for _ in self.solve():
+    def solve(self) -> None:
+        for _ in self.iter_solve():
             pass
 
     # generation
-    def generate(self) -> Iterator[int]:
+    def iter_generate(self) -> Iterator[int]:
         viewed: list[tuple[int, int]] = []
         path: list[tuple[int, int]] = [(0, 0)]
         turn: int = 0
@@ -430,6 +432,6 @@ class Maze(BaseModel):
         self.set_state(*self.exit, CellState.EXIT)
         yield 1
 
-    def generate_maze(self) -> None:
-        for _ in self.generate():
+    def generate(self) -> None:
+        for _ in self.iter_generate():
             pass

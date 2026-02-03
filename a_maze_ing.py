@@ -6,9 +6,6 @@ import sys
 from dataclasses import dataclass
 from typing import Iterator
 
-from pydantic import ValidationError
-
-from mazegen import Maze
 from colors import Palette
 from engine import (
     EngineConfig,
@@ -17,6 +14,9 @@ from engine import (
     KeyCode,
 )
 from loader import load
+from pydantic import ValidationError
+
+from mazegen import Maze
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -73,10 +73,10 @@ def keypress(
     match keycode:
         case KeyCode.G:
             controls.reinitialize()
-            args.generator = maze.generate()
+            args.generator = maze.iter_generate()
         case KeyCode.C:
             controls.clear()
-            args.solver = maze.solve()
+            args.solver = maze.iter_solve()
         case KeyCode.Q:
             controls.stop()
         case KeyCode.R:
@@ -173,7 +173,10 @@ def main(argc: int, argv: list[str]) -> None:
         engine.loop(
             update,
             keypress=keypress,
-            args=LoopContext(generator=maze.generate(), solver=maze.solve()),
+            args=LoopContext(
+                generator=maze.iter_generate(),
+                solver=maze.iter_solve(),
+            ),
         )
     except ValidationError as e:
         log_validation_errors(e)
