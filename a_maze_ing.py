@@ -48,13 +48,6 @@ LOGGING_CONFIG = {
 }
 
 
-def log_validation_errors(e: ValidationError) -> None:
-    for error in e.errors():
-        field = " -> ".join(str(item) for item in error["loc"])
-        message = error["msg"]
-        logger.error(f"{type(e).__name__}: {message} ({field}) ")
-
-
 @dataclass
 class LoopContext:
     generator: Iterator[int] | None = None
@@ -173,7 +166,6 @@ if __name__ == "__main__":
             field = " -> ".join(str(item) for item in error["loc"])
             message = error["msg"]
             logger.error(f"{type(e).__name__}: {message} ({field}) ")
-            log_validation_errors(e)
         sys.exit(2)
     except Exception as e:
         logger.error(f"{type(e).__name__}: {e}")
