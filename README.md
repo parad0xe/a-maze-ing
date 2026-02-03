@@ -45,7 +45,7 @@ make lint-strict
 To run the program with the **_python debugger_** :
 
 ```bash
-make lint
+make debug
 ```
 
 ### STRUCTURE
@@ -56,9 +56,9 @@ to be reusable by other students as a **_maze generator_** in the pacman project
 To see how to use it, you can refer to the README of the package.
 
 The entry point of the program, called **_a_maze_ing_**, is located at the root of the
-project. The remaining sources are in a directory called **_srcs_** that has three files:
-*colors.py* to handle colors, *engine.py* to handle display and *loader.py* to handle the
-parsing. 
+project. The remaining sources are in a directory called **_srcs_** that has four files:
+*colors.py* to handle colors, *engine.py* to handle display, *loader.py* to handle the
+parsing and *errors.py* to handle errors.
 
 The parsing loads a file named **_config.txt_** which has key-value paired informations
 for the maze to create, solve and display. They are : SEED, WIDTH, HEIGHT, ENTRY, EXIT, 
@@ -121,6 +121,7 @@ the work througout the project.
   * Maze solving
   * Makefile and install
   * README
+
 
 
 
