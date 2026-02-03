@@ -8,9 +8,10 @@ WHEEL_NAME := mazegen
 WHEEL_DIR := mazegen
 WHEEL_VER := 0.0.1
 WHEEL_DEST_DIR := dist
-WHEEL_FILES := $(WHEEL_DIR)/mazegen.py $(WHEEL_DIR)/__init__.py
+WHEEL_FILES := $(WHEEL_DIR)/mazegen.py \
+			   $(WHEEL_DIR)/__init__.py \
+			   $(WHEEL_DIR)/README.md
 WHEEL := $(WHEEL_DEST_DIR)/$(WHEEL_NAME)-$(WHEEL_VER)-py3-none-any.whl
-WHEEL_STAMP := $(VENV)/.mazegen_installed
 
 PYCACHES = $(addsuffix /__pycache__,$(DIRS))
 MYPYCACHES = $(addsuffix /.mypy_cache,$(DIRS))
