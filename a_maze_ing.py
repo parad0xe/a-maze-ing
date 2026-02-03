@@ -16,7 +16,7 @@ from errors import ExitCode
 from loader import load
 from pydantic import ValidationError
 
-from mazegen import CellState, Maze
+from mazegen import CellState, Maze, WallDescriptor
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -61,8 +61,12 @@ class LoopContext:
     generator: Iterator[int] | None = None
     solver: Iterator[int] | None = None
     idle_index: int = 0
-    idle_previous_cell: tuple[int, int] | None = None
+    prev_idle_cell: tuple[int, int] | None = None
     idle_cell: tuple[int, int] = (0, 0)
+
+    def reset_idle(self) -> None:
+        self.idle_index = 0
+        self.prev_idle_cell = None
 
 
 def keypress(
@@ -88,11 +92,11 @@ def keypress(
 
     match keycode:
         case KeyCode.G:
-            args.idle_index = 0
+            args.reset_idle()
             controls.reinitialize()
             args.generator = maze.iter_generate()
         case KeyCode.C:
-            args.idle_index = 0
+            args.reset_idle()
             controls.clear()
             args.solver = maze.iter_solve()
         case KeyCode.Q:
@@ -100,7 +104,7 @@ def keypress(
         case KeyCode.R:
             palette.randomize()
         case KeyCode.N:
-            args.idle_index = 0
+            args.reset_idle()
             controls.clear()
             maze.random_entry_exit()
             controls.render()
@@ -108,6 +112,37 @@ def keypress(
             controls.toggle_path()
 
     return 0
+
+
+def idle_animation_tick(maze: Maze, args: LoopContext) -> None:
+    """
+    This advance the maze path animation by one step and update cell states.
+
+    Args:
+        maze: Maze instance providing the path and state modification methods.
+        args: Context object holding the animation state and current position.
+    """
+    len_shortest_path: int = len(maze.shortest_path)
+    char: str = maze.shortest_path[args.idle_index % len_shortest_path]
+    if args.prev_idle_cell:
+        if args.prev_idle_cell == maze.entry:
+            maze.set_state(*args.prev_idle_cell, CellState.ENTRY)
+        elif args.prev_idle_cell == maze.exit:
+            maze.set_state(*args.prev_idle_cell, CellState.EXIT)
+        else:
+            maze.set_state(*args.prev_idle_cell, CellState.PATH)
+
+    if args.idle_cell == maze.exit:
+        args.idle_cell = maze.entry
+    args.prev_idle_cell = args.idle_cell
+
+    dx, dy = WallDescriptor.cardinals.get(char, (0, 0))
+    args.idle_cell = (args.idle_cell[0] + dx, args.idle_cell[1] + dy)
+
+    if args.idle_cell != maze.exit:
+        maze.set_state(*args.idle_cell, CellState.IDLE_PATH)
+
+    args.idle_index += 1
 
 
 def update(
@@ -140,35 +175,10 @@ def update(
             logger.error(f"export failed: {type(e).__name__}: {e}")
             controls.stop(ExitCode.FILE_ERROR)
         args.idle_cell = maze.entry
-        args.idle_previous_cell = None
+        args.prev_idle_cell = None
 
     if maze.shortest_path:
-        len_shortest_path: int = len(maze.shortest_path)
-        char: str = maze.shortest_path[args.idle_index % len_shortest_path]
-        if args.idle_previous_cell:
-            if args.idle_previous_cell == maze.entry:
-                maze.set_state(*args.idle_previous_cell, CellState.ENTRY)
-            elif args.idle_previous_cell == maze.exit:
-                maze.set_state(*args.idle_previous_cell, CellState.EXIT)
-            else:
-                maze.set_state(*args.idle_previous_cell, CellState.PATH)
-
-        if args.idle_cell == maze.exit:
-            args.idle_cell = maze.entry
-        args.idle_previous_cell = args.idle_cell
-        if char == "W":
-            args.idle_cell = (args.idle_cell[0] - 1, args.idle_cell[1])
-        elif char == "E":
-            args.idle_cell = (args.idle_cell[0] + 1, args.idle_cell[1])
-        elif char == "S":
-            args.idle_cell = (args.idle_cell[0], args.idle_cell[1] + 1)
-        elif char == "N":
-            args.idle_cell = (args.idle_cell[0], args.idle_cell[1] - 1)
-
-        if args.idle_cell != maze.exit:
-            maze.set_state(*args.idle_cell, CellState.IDLE_PATH)
-
-        args.idle_index += 1
+        idle_animation_tick(maze, args)
         controls.render()
 
 
@@ -192,7 +202,7 @@ def main() -> None:
 
     engine = GraphicalEngine(
         maze=maze,
-        config=EngineConfig(wall_size=2, cell_size=50),
+        config=EngineConfig(wall_size=2, cell_size=60),
         palette=Palette(
             empty=0x000000FF,
             wall=0x0000AAFF,

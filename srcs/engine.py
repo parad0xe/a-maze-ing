@@ -4,10 +4,10 @@ from typing import Any, Callable, TypeAlias
 
 import numpy as np
 import numpy.typing as npt
+from colors import Palette, Rgba
 from mlx import Mlx
 from pydantic import BaseModel, Field
 
-from colors import Palette, Rgba
 from mazegen import Cell, CellState, CellWall, Maze
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -41,6 +41,7 @@ class KeyCode(IntEnum):
         R (int): Key code for randomize palette.
         S (int): Key code for toggle path display.
     """
+
     C = 99
     G = 103
     N = 110
@@ -57,6 +58,7 @@ class EngineConfig(BaseModel):
         cell_size: Pixel size of one cell square.
         wall_size: Pixel thickness of walls inside a cell.
     """
+
     cell_size: int = Field(frozen=True)
     wall_size: int = Field(frozen=True)
 
@@ -69,6 +71,7 @@ class EngineContext(BaseModel):
         args: User provided loop context.
         palette: Palette used to draw tiles.
     """
+
     args: Any
     palette: Palette
 
@@ -144,9 +147,9 @@ class GraphicalEngine:
         tiles: Tiles = {}
         for state_value, pixel in pixels.items():
             for walls in range(16):
-                tile: Tile = np.full((
-                    cell_size, cell_size), pixel, dtype=PIXEL_DT
-                )
+                tile: Tile = np.full((cell_size, cell_size),
+                                     pixel,
+                                     dtype=PIXEL_DT)
 
                 if walls & CellWall.NORTH:
                     tile[:wall_size, :] = wall_pixel
@@ -238,6 +241,7 @@ class GraphicalEngine:
         Attributes:
             exit_code: Process exit code set when stopping the loop.
         """
+
         exit_code: int = 0
 
         def __init__(self, engine: "GraphicalEngine") -> None:
@@ -312,7 +316,7 @@ class GraphicalEngine:
 
                     if not self._engine._show_path and state & (
                             CellState.PATH | CellState.SEEK |
-                            CellState.SEEK_PREMIUM):
+                            CellState.SEEK_PREMIUM | CellState.IDLE_PATH):
                         state = CellState.EMPTY
                     view_2d[y0:y0 + cell_size, x0:x0 + cell_size] = (
                         self._engine._tiles[(walls, state)]
