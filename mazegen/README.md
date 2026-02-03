@@ -19,8 +19,8 @@ formatted output with the maze specs, you can use ``Maze.export()``. To clear th
 you can use ``Maze.initialize()``. It will automatically turn on all walls and display 42 in the center.
 
 To create a ``Maze()`` instance, you can pass it these attributes :
-- **width** (int between 1 and 50)  
-- **height** (int between 1 and 50)  
+- **width** (int between 1 and 150)  
+- **height** (int between 1 and 150)  
 - **entry** (tuple[int, int] in maze boundaries)  
 - **exit** (tuple[int, int] in maze boundaries)  
 - **perfect** (bool)
@@ -53,3 +53,4 @@ There is also a set of helper methods to interact with maze cells:
 > [!NOTE]
 > if you need more precise informations about methods signatures or usage,
 > please read the docstrings in the [**mazegen.py**](mazegen.py) file.
+
