@@ -23,7 +23,6 @@ UpdateCallback: TypeAlias = Callable[
 
 PIXEL_DT = np.dtype("u1, u1, u1, u1")
 
-# typing helpers
 TileKey: TypeAlias = tuple[int, int]
 Pixel: TypeAlias = np.void
 Tile: TypeAlias = npt.NDArray[Pixel]
