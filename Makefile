@@ -10,6 +10,7 @@ WHEEL_VER := 0.0.1
 WHEEL_DEST_DIR := dist
 WHEEL_FILES := $(WHEEL_DIR)/mazegen.py \
 			   $(WHEEL_DIR)/__init__.py \
+			   $(WHEEL_DIR)/py.typed \
 			   $(WHEEL_DIR)/README.md
 WHEEL := $(WHEEL_DEST_DIR)/$(WHEEL_NAME)-$(WHEEL_VER)-py3-none-any.whl
 
