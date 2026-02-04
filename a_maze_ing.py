@@ -5,18 +5,18 @@ import sys
 from dataclasses import dataclass
 from typing import Iterator
 
-from colors import Palette
-from engine import (
+from pydantic import ValidationError
+
+from mazegen import CellState, Maze, WallDescriptor
+from src.colors import Palette
+from src.engine import (
     EngineConfig,
     EngineContext,
     GraphicalEngine,
     KeyCode,
 )
-from errors import ExitCode
-from loader import load
-from pydantic import ValidationError
-
-from mazegen import CellState, Maze, WallDescriptor
+from src.errors import ExitCode
+from src.loader import load
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -60,6 +60,7 @@ class LoopContext:
         prev_idle_cell: Previous animated cell to restore after moving.
         idle_cell: Current animated cell position.
     """
+
     generator: Iterator[int] | None = None
     solver: Iterator[int] | None = None
     idle_index: int = 0

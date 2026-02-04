@@ -4,11 +4,11 @@ from typing import Any, Callable, TypeAlias
 
 import numpy as np
 import numpy.typing as npt
-from colors import Palette, Rgba
 from mlx import Mlx
 from pydantic import BaseModel, Field
 
 from mazegen import Cell, CellState, CellWall, Maze
+from src.colors import Palette, Rgba
 
 logger: logging.Logger = logging.getLogger(__name__)
 
