@@ -26,7 +26,7 @@ PIP := $(PYTHON) -m pip
 POETRY := POETRY_VIRTUALENVS_IN_PROJECT=true $(PYTHON) -m poetry
 
 # rules
-install: pyproject.toml $(WHEEL) | $(PYTHON)
+install: pyproject.toml poetry.lock $(WHEEL) | $(PYTHON)
 	$(POETRY) install --with dev --no-root
 
 run: install
@@ -37,7 +37,6 @@ wheel: $(WHEEL)
 clean:
 	rm -rf $(PYCACHES) $(MYPYCACHES)
 	rm -rf $(VENV)
-	rm -f poetry.lock
 	rm -rf $(WHEEL_DEST_DIR)
 
 debug: install
