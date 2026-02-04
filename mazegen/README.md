@@ -12,7 +12,7 @@ in your project are :
 - [Maze.solve()](mazegen.py#L383)  
 - [Maze.initialize()](mazegen.py#L137)
 
-To get an empty maze, you simply need to instantiate a ``Maze()`` and Pydantic will automatically
+To get an empty maze, you simply need to instantiate a ``Maze()`` with appropriate attributes, and Pydantic will automatically
 fill the numpy table with closed walls. You then only need to call ``Maze.generate()`` to build walls,
 and then ``Maze.solve()`` to get the shortest path from the entry to the exit. If you want to get a
 formatted output with the maze specs, you can use ``Maze.export()``. To clear the current maze, 
@@ -25,7 +25,7 @@ To create a ``Maze()`` instance, you can pass it these attributes :
 - **exit** (tuple[int, int] in maze boundaries)  
 - **perfect** (bool)
 - **seed** (int | None)
-Any invalid attribute will raise a **_ValidationError_**.  
+Seed is optional, default to None. Any invalid attribute will raise a **_ValidationError_**.  
 
 After you called the ``Maze.solve()`` method, your maze's **shortest_path** attribute (list[str])
 will contain the shortest path between the entry and the exit. Finally, your maze's **array** attribute
@@ -53,4 +53,5 @@ There is also a set of helper methods to interact with maze cells:
 > [!NOTE]
 > if you need more precise informations about methods signatures or usage,
 > please read the docstrings in the [**mazegen.py**](mazegen.py) file.
+
 
