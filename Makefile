@@ -20,7 +20,7 @@ POETRY := POETRY_VIRTUALENVS_IN_PROJECT=true $(PYTHON) -m poetry
 
 WHEEL_NAME := mazegen
 WHEEL_DIR := mazegen
-WHEEL_VER := $(shell $(POETRY) version -s)
+WHEEL_VER := $(shell sed -n '/^version*=*/{s/.*"\(.*\)".*/\1/p;q}' $(PYPROJECT_TOML))
 WHEEL_DEST_DIR := dist
 WHEEL_FILES := $(WHEEL_DIR)/mazegen.py \
 			   $(WHEEL_DIR)/__init__.py \
