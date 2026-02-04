@@ -5,16 +5,7 @@ ARGS ?= config.txt
 VENV := .venv
 
 POETRY_LOCK := poetry.lock
-
-WHEEL_NAME := mazegen
-WHEEL_DIR := mazegen
-WHEEL_VER := 0.0.1
-WHEEL_DEST_DIR := dist
-WHEEL_FILES := $(WHEEL_DIR)/mazegen.py \
-			   $(WHEEL_DIR)/__init__.py \
-			   $(WHEEL_DIR)/py.typed \
-			   $(WHEEL_DIR)/README.md
-WHEEL := $(WHEEL_DEST_DIR)/$(WHEEL_NAME)-$(WHEEL_VER)-py3-none-any.whl
+PYPROJECT_TOML := pyproject.toml
 
 PYCACHES = $(addsuffix /__pycache__,$(DIRS))
 MYPYCACHES = $(addsuffix /.mypy_cache,$(DIRS))
@@ -27,8 +18,18 @@ MYPY := $(PYTHON) -m mypy $(EXCLUDE)
 PIP := $(PYTHON) -m pip
 POETRY := POETRY_VIRTUALENVS_IN_PROJECT=true $(PYTHON) -m poetry
 
+WHEEL_NAME := mazegen
+WHEEL_DIR := mazegen
+WHEEL_VER := $(shell $(POETRY) version -s)
+WHEEL_DEST_DIR := dist
+WHEEL_FILES := $(WHEEL_DIR)/mazegen.py \
+			   $(WHEEL_DIR)/__init__.py \
+			   $(WHEEL_DIR)/py.typed \
+			   $(WHEEL_DIR)/README.md
+WHEEL := $(WHEEL_DEST_DIR)/$(WHEEL_NAME)-$(WHEEL_VER)-py3-none-any.whl
+
 # rules
-install: pyproject.toml $(POETRY_LOCK) $(WHEEL) | $(PYTHON)
+install: $(PYPROJECT_TOML) $(POETRY_LOCK) $(WHEEL) | $(PYTHON)
 	$(POETRY) install --with dev --no-root
 
 run: install
@@ -63,8 +64,8 @@ $(WHEEL): $(WHEEL_FILES) | $(PYTHON)
 	@$(POETRY) build -f wheel
 	@$(PIP) install --no-deps --force-reinstall $(WHEEL)
 
-$(POETRY_LOCK): pyproject.toml
-    $(POETRY) lock
+$(POETRY_LOCK): $(PYPROJECT_TOML)
+	@$(POETRY) lock
 
 # miscellaneous
-.PHONY: install run debug lint lint-strict clean
+.PHONY: install run debug lint lint-strict clean wheel
