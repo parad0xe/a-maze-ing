@@ -4,6 +4,8 @@ MAIN := a_maze_ing.py
 ARGS ?= config.txt
 VENV := .venv
 
+POETRY_LOCK := poetry.lock
+
 WHEEL_NAME := mazegen
 WHEEL_DIR := mazegen
 WHEEL_VER := 0.0.1
@@ -26,7 +28,7 @@ PIP := $(PYTHON) -m pip
 POETRY := POETRY_VIRTUALENVS_IN_PROJECT=true $(PYTHON) -m poetry
 
 # rules
-install: pyproject.toml poetry.lock $(WHEEL) | $(PYTHON)
+install: pyproject.toml $(POETRY_LOCK) $(WHEEL) | $(PYTHON)
 	$(POETRY) install --with dev --no-root
 
 run: install
@@ -60,6 +62,9 @@ $(PYTHON):
 $(WHEEL): $(WHEEL_FILES) | $(PYTHON)
 	@$(POETRY) build -f wheel
 	@$(PIP) install --no-deps --force-reinstall $(WHEEL)
+
+$(POETRY_LOCK): pyproject.toml
+    $(POETRY) lock
 
 # miscellaneous
 .PHONY: install run debug lint lint-strict clean
