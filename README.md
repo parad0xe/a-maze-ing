@@ -62,7 +62,7 @@ parsing and *errors.py* to handle errors.
 
 The parsing loads a file named **_config.txt_** which has key-value paired informations
 for the maze to create, solve and display. They are : SEED, WIDTH, HEIGHT, ENTRY, EXIT, 
-OUTPUT_FILE, and PERFECT. Here is an example:
+OUTPUT_FILE, and PERFECT. The SEED key is optional and the others are mandatory. Here is an example:
 ```
 # config file
 WIDTH=25
@@ -121,6 +121,7 @@ the work througout the project.
   * Maze solving
   * Makefile and install
   * README
+
 
 
 
