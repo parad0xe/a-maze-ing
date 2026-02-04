@@ -51,13 +51,15 @@ LOGGING_CONFIG = {
 @dataclass
 class LoopContext:
     """
-    This context stores the current generator and solver iterators.
+    This stores iterators and state for the loop and idle path animation.
 
     Attributes:
         generator: Iterator used to animate maze generation.
         solver: Iterator used to animate maze solving.
+        idle_index: Current index in the idle animation path.
+        prev_idle_cell: Previous animated cell to restore after moving.
+        idle_cell: Current animated cell position.
     """
-
     generator: Iterator[int] | None = None
     solver: Iterator[int] | None = None
     idle_index: int = 0
@@ -65,6 +67,9 @@ class LoopContext:
     idle_cell: tuple[int, int] = (0, 0)
 
     def reset_idle(self) -> None:
+        """
+        This resets the idle animation to its initial state.
+        """
         self.idle_index = 0
         self.prev_idle_cell = None
 
