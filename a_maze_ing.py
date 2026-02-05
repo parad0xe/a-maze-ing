@@ -208,7 +208,7 @@ def main() -> None:
 
     engine = GraphicalEngine(
         maze=maze,
-        config=EngineConfig(wall_size=2, cell_size=60),
+        config=EngineConfig(wall_size=2, cell_size=42),
         palette=Palette(
             empty=0x000000FF,
             wall=0x0000AAFF,
