@@ -65,7 +65,7 @@ $(WHEEL): $(WHEEL_FILES) | $(PYTHON)
 	@$(POETRY) build -f wheel
 	@$(PIP) install --no-deps --force-reinstall $(WHEEL)
 
-$(POETRY_LOCK): $(PYPROJECT_TOML)
+$(POETRY_LOCK): $(PYPROJECT_TOML) | $(PYTHON)
 	@$(POETRY) lock
 
 # miscellaneous
